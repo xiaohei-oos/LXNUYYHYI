@@ -57,29 +57,30 @@ export default async function HomePage() {
           alt="Vision Board Inspiration"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#FAFAF8] via-[#FAFAF8]/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#FAFAF8] via-transparent to-[#FAFAF8]/40" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32 w-full">
           <div className="max-w-2xl">
             <p className="text-warm-gold font-medium tracking-widest uppercase text-sm mb-4">LXNUYYHYI</p>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-white leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-foreground leading-tight">
               Manifest Your Dreams
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-white/80 leading-relaxed">
+            <p className="mt-6 text-lg sm:text-xl text-foreground/70 leading-relaxed">
               Beautiful, high-quality vision board image packs designed to inspire and motivate.
               Download, print, and create the life you envision.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-start gap-4">
               <Link
                 href="#categories"
-                className="inline-flex items-center px-8 py-3.5 bg-white text-foreground rounded-full font-medium hover:bg-white/90 transition-colors"
+                className="inline-flex items-center px-8 py-3.5 bg-foreground text-white rounded-full font-medium hover:bg-foreground/90 transition-colors"
               >
                 Browse Collections
               </Link>
-              <p className="text-sm text-white/60 flex items-center gap-3">
+              <p className="text-sm text-foreground/50 flex items-center gap-3">
                 <span>Instant download</span>
-                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span className="w-1 h-1 rounded-full bg-foreground/30" />
                 <span>Print-ready</span>
-                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span className="w-1 h-1 rounded-full bg-foreground/30" />
                 <span>High resolution</span>
               </p>
             </div>

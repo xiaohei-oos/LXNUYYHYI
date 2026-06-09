@@ -53,7 +53,7 @@ export default async function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[500px] sm:min-h-[600px] flex items-center">
         <img
-          src="https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_46a979f1-c4cf-41f6-b82d-a16182a98a37.jpeg?sign=1812544377-3d0265dfb1-0-a682b895c6e95b424aac23784988f5ee037eac2415b9326e2073887daf058e3"
+          src="/images/hero-banner.jpg"
           alt="Vision Board Inspiration"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -139,12 +139,12 @@ export default async function HomePage() {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
-              <div className="p-5">
-                <h3 className="text-lg font-serif font-semibold text-foreground leading-snug">{cat.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{cat.image_count} images &middot; Full pack</p>
+              <div className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-serif font-semibold text-foreground leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem]">{cat.name}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">{cat.image_count} images &middot; Full pack</p>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground uppercase tracking-wide">Download ZIP</span>
-                  <span className="text-xl font-bold text-warm-gold">
+                  <span className="text-lg sm:text-xl font-bold text-warm-gold">
                     ${(cat.price_cents / 100).toFixed(2)}
                   </span>
                 </div>

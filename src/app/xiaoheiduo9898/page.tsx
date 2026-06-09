@@ -102,7 +102,31 @@ export default function AdminPage() {
       ]);
       if (catRes.ok) setCategories((await catRes.json()).categories);
       if (orderRes.ok) setOrders((await orderRes.json()).orders);
-      if (imgRes.ok) setImages((await imgRes.json()).images);
+      if (imgRes.ok) {
+        const imgData = (await imgRes.json()).images as VisionImage[];
+        // Resolve OSS keys to signed URLs for image thumbnails
+        const keys = imgData.map(img => img.thumbnail_url).filter(Boolean);
+        if (keys.length > 0) {
+          try {
+            const resRes = await fetch('/api/resolve-urls', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keys }),
+            });
+            if (resRes.ok) {
+              const { urls } = await resRes.json();
+              imgData.forEach((img, i) => {
+                if (img.thumbnail_url && urls[i]) {
+                  img.thumbnail_url = urls[i];
+                }
+              });
+            }
+          } catch (e) {
+            console.error('Failed to resolve image URLs:', e);
+          }
+        }
+        setImages(imgData);
+      }
       if (statsRes.ok) setStats((await statsRes.json()));
     } catch (e) {
       console.error('Failed to fetch data:', e);

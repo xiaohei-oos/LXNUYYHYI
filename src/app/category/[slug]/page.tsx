@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { resolveImageUrl } from '@/storage/oss-client';
 import CategoryBuyClient from './CategoryBuyClient';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,17 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   const imgs = (images || []) as VisionImage[];
 
+  // Resolve cover image URL (OSS key → signed URL)
+  const resolvedCoverImage = await resolveImageUrl(cat.cover_image, 86400);
+
+  // Resolve thumbnail URLs for all images
+  const imgsWithResolvedUrls = await Promise.all(
+    imgs.map(async (img) => ({
+      ...img,
+      thumbnail_url: await resolveImageUrl(img.thumbnail_url, 86400),
+    }))
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -84,7 +96,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="relative rounded-2xl overflow-hidden aspect-[21/9]">
           <img
-            src={cat.cover_image}
+            src={resolvedCoverImage}
             alt={cat.name}
             className="w-full h-full object-cover"
           />
@@ -140,10 +152,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       {/* Image Preview Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <h2 className="text-xl font-semibold text-foreground mb-6">
-          Preview ({imgs.length} images)
+          Preview ({imgsWithResolvedUrls.length} images)
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {imgs.map((img) => (
+          {imgsWithResolvedUrls.map((img) => (
             <div
               key={img.id}
               className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-secondary border border-border"

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { S3Storage } from 'coze-coding-dev-sdk';
+import { ossGeneratePresignedUrl, isOssKey, resolveImageUrl } from '@/storage/oss-client';
 
 export async function GET(
   request: Request,
@@ -45,18 +45,21 @@ export async function GET(
     }
 
     // Generate signed URL for download
-    const storage = new S3Storage({
-      endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL || '',
-      accessKey: '',
-      secretKey: '',
-      bucketName: process.env.COZE_BUCKET_NAME || '',
-      region: process.env.COZE_BUCKET_REGION || 'cn-beijing',
-    });
+    let downloadUrl: string;
 
-    const downloadUrl = await storage.generatePresignedUrl({
-      key: category.zip_file_key,
-      expireTime: 3600,
-    });
+    if (isOssKey(category.zip_file_key)) {
+      // Alibaba Cloud OSS
+      downloadUrl = await ossGeneratePresignedUrl({
+        key: category.zip_file_key,
+        expireTime: 3600, // 1 hour
+      });
+    } else if (category.zip_file_key.startsWith('/') || category.zip_file_key.startsWith('http')) {
+      // Local path or full URL (legacy)
+      downloadUrl = category.zip_file_key;
+    } else {
+      // Fallback: treat as OSS key
+      downloadUrl = await resolveImageUrl(category.zip_file_key);
+    }
 
     // Update download count
     await client

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { ossDeleteFile, isOssKey } from '@/storage/oss-client';
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     const client = getSupabaseClient();
     let query = client
       .from('vision_images')
-      .select('id, title, title_cn, thumbnail_url, category_id, categories!inner(name, name_cn, slug)')
+      .select('id, title, title_cn, thumbnail_url, hd_image_key, category_id, categories!inner(name, name_cn, slug)')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -91,13 +92,37 @@ export async function DELETE(request: Request) {
 
     const client = getSupabaseClient();
 
-    // Get image info before deleting
+    // Get image info before deleting (need keys to delete from OSS)
     const { data: img } = await client
       .from('vision_images')
-      .select('category_id')
+      .select('category_id, thumbnail_url, hd_image_key')
       .eq('id', id)
       .maybeSingle();
 
+    // Delete from OSS if keys exist
+    if (img) {
+      // Delete thumbnail from OSS
+      if (img.thumbnail_url && isOssKey(img.thumbnail_url)) {
+        try {
+          await ossDeleteFile({ key: img.thumbnail_url });
+        } catch (e) {
+          console.error('Failed to delete thumbnail from OSS:', e);
+          // Continue even if OSS delete fails
+        }
+      }
+
+      // Delete HD image from OSS
+      if (img.hd_image_key && isOssKey(img.hd_image_key)) {
+        try {
+          await ossDeleteFile({ key: img.hd_image_key });
+        } catch (e) {
+          console.error('Failed to delete HD image from OSS:', e);
+          // Continue even if OSS delete fails
+        }
+      }
+    }
+
+    // Delete from database
     const { error } = await client
       .from('vision_images')
       .delete()

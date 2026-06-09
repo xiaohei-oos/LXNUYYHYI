@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { resolveImageUrl } from '@/storage/oss-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,14 @@ export default async function HomePage() {
 
   const cats = (categories || []) as Category[];
 
+  // Resolve cover image URLs (OSS keys → signed URLs, local paths → keep as-is)
+  const catsWithResolvedImages = await Promise.all(
+    cats.map(async (cat) => ({
+      ...cat,
+      cover_image: await resolveImageUrl(cat.cover_image, 86400),
+    }))
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -36,7 +45,7 @@ export default async function HomePage() {
               </span>
             </Link>
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-              {cats.map((cat) => (
+              {catsWithResolvedImages.map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/category/${cat.slug}`}
@@ -126,7 +135,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {cats.map((cat) => (
+          {catsWithResolvedImages.map((cat) => (
             <Link
               key={cat.id}
               href={`/category/${cat.slug}`}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { S3Storage } from 'coze-coding-dev-sdk';
+import { ossUploadFile, ossGeneratePresignedUrl } from '@/storage/oss-client';
 
 export async function POST(request: Request) {
   try {
@@ -18,37 +18,42 @@ export async function POST(request: Request) {
     // Read file buffer
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // Generate S3 key for HD image
+    // Generate OSS key for HD image
     const sanitized = title.replace(/\.\w+$/, '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const hdImageKey = `hd/${categorySlug}/${sanitized}-${Date.now()}.jpg`;
+    const timestamp = Date.now();
+    const hdImageKey = `hd/${categorySlug}/${sanitized}-${timestamp}.jpg`;
 
-    // Upload to S3
-    const storage = new S3Storage({
-      endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL || '',
-      accessKey: '',
-      secretKey: '',
-      bucketName: process.env.COZE_BUCKET_NAME || '',
-      region: process.env.COZE_BUCKET_REGION || 'cn-beijing',
-    });
-
-    const uploadedKey = await storage.uploadFile({
+    // Upload to Alibaba Cloud OSS
+    await ossUploadFile({
       fileContent: fileBuffer,
-      fileName: hdImageKey,
+      key: hdImageKey,
       contentType: file.type || 'image/jpeg',
     });
 
-    // Generate a thumbnail URL using OSS image processing parameters
-    // For now, use the same URL as thumbnail (will be resized via CSS on frontend)
-    const thumbnailUrl = uploadedKey;
+    // Also upload a thumbnail version (same file, different key prefix)
+    // In production, you'd resize the image. For now, upload the same file as thumbnail
+    const thumbnailKey = `thumbnails/${categorySlug}/${sanitized}-${timestamp}.jpg`;
+    await ossUploadFile({
+      fileContent: fileBuffer,
+      key: thumbnailKey,
+      contentType: file.type || 'image/jpeg',
+    });
 
-    // Save to database
+    // Generate a signed URL for the thumbnail (for admin preview)
+    const thumbnailSignedUrl = await ossGeneratePresignedUrl({
+      key: thumbnailKey,
+      expireTime: 86400, // 24 hours
+    });
+
+    // Save to database - store the OSS key (not the signed URL)
+    // thumbnail_url stores the key, will be resolved to signed URL on page render
     const client = getSupabaseClient();
     const { error } = await client.from('vision_images').insert({
       title: title || file.name.replace(/\.\w+$/, '').replace(/[-_]/g, ' '),
       title_cn: titleCn || null,
       category_id: categoryId,
-      thumbnail_url: thumbnailUrl,
-      hd_image_key: uploadedKey,
+      thumbnail_url: thumbnailKey,
+      hd_image_key: hdImageKey,
     });
 
     if (error) {
@@ -72,8 +77,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      hdImageKey: uploadedKey,
-      thumbnailUrl,
+      hdImageKey,
+      thumbnailKey,
+      thumbnailUrl: thumbnailSignedUrl,
     });
   } catch (err) {
     console.error('上传失败:', err);

@@ -57,8 +57,7 @@ export default async function HomePage() {
           alt="Vision Board Inspiration"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#FAFAF8] via-[#FAFAF8]/80 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#FAFAF8] via-transparent to-[#FAFAF8]/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-white/40" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32 w-full">
           <div className="max-w-2xl">
             <p className="text-warm-gold font-medium tracking-widest uppercase text-sm mb-4">LXNUYYHYI</p>

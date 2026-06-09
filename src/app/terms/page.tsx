@@ -1,4 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description:
+    'LXNUYYHYI Terms of Service. Read our terms and conditions for using and purchasing vision board image packs.',
+  alternates: {
+    canonical: '/terms',
+  },
+};
 
 export default function TermsPage() {
   return (

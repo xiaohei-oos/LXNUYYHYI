@@ -1,4 +1,26 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'FAQ - Frequently Asked Questions',
+  description:
+    'Find answers to common questions about LXNUYYHYI vision board image packs: downloads, printing, licensing, refunds, and payment security.',
+  keywords: [
+    'vision board FAQ',
+    'vision board images questions',
+    'printable art FAQ',
+    'digital download questions',
+  ],
+  alternates: {
+    canonical: '/faq',
+  },
+  openGraph: {
+    title: 'FAQ - Frequently Asked Questions | LXNUYYHYI',
+    description:
+      'Find answers to common questions about LXNUYYHYI vision board image packs.',
+    url: '/faq',
+  },
+};
 
 export default function FAQPage() {
   const faqs = [
@@ -56,7 +78,7 @@ export default function FAQPage() {
     },
     {
       question: 'Is my payment information secure?',
-      answer: 'Absolutely. We use Stripe, one of the world\'s leading payment processors, to handle all transactions. Your credit card information is encrypted and never stored on our servers. Stripe is PCI-DSS compliant and used by millions of businesses worldwide.',
+      answer: "Absolutely. We use Stripe, one of the world's leading payment processors, to handle all transactions. Your credit card information is encrypted and never stored on our servers. Stripe is PCI-DSS compliant and used by millions of businesses worldwide.",
     },
     {
       question: 'How can I contact you?',
@@ -64,8 +86,30 @@ export default function FAQPage() {
     },
   ];
 
+  // FAQ Schema structured data
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      {/* FAQ Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqSchema),
+        }}
+      />
+
       <nav className="border-b border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="text-xl font-serif font-bold tracking-wider text-foreground">
@@ -118,6 +162,17 @@ export default function FAQPage() {
           <Link href="/" className="text-warm-gold hover:underline">&larr; Back to Home</Link>
         </div>
       </article>
+
+      <footer className="border-t border-border bg-card">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xl font-serif font-bold tracking-wider text-foreground">LXNUYYHYI</span>
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} LXNUYYHYI. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

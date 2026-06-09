@@ -1,8 +1,42 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { resolveImageUrl } from '@/storage/oss-client';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'LXNUYYHYI | Premium Vision Board Image Packs | Download & Print',
+  description:
+    'Curated vision board image collections across 8 life categories. High-quality, print-ready downloads starting at $9.90. Manifest your dreams with beautiful vision board art.',
+  keywords: [
+    'vision board printables',
+    'vision board images',
+    'vision board kit',
+    'manifestation art',
+    'law of attraction images',
+    'printable vision board',
+    'vision board download',
+    'dream board printables',
+  ],
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'LXNUYYHYI | Premium Vision Board Image Packs',
+    description:
+      'Curated vision board image collections across 8 life categories. High-quality, print-ready downloads.',
+    url: '/',
+    images: [
+      {
+        url: '/images/og-default.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'LXNUYYHYI - Premium Vision Board Image Packs',
+      },
+    ],
+  },
+};
 
 interface Category {
   id: string;
@@ -63,7 +97,7 @@ export default async function HomePage() {
       <section className="relative overflow-hidden min-h-[500px] sm:min-h-[600px] flex items-center">
         <img
           src="/images/hero-banner.jpg"
-          alt="Vision Board Inspiration"
+          alt="LXNUYYHYI vision board inspiration - curated high-resolution image packs for manifesting your dreams"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-white/40" />
@@ -144,7 +178,7 @@ export default async function HomePage() {
               <div className="aspect-[4/3] relative overflow-hidden">
                 <img
                   src={cat.cover_image}
-                  alt={cat.name}
+                  alt={`${cat.name} vision board images - curated collection for manifestation and goal setting`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               </div>

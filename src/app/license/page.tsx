@@ -1,4 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Commercial License',
+  description:
+    'LXNUYYHYI Commercial License. Understand your rights and permissions for using our vision board images in personal and commercial projects.',
+  alternates: {
+    canonical: '/license',
+  },
+};
 
 export default function CommercialLicensePage() {
   return (

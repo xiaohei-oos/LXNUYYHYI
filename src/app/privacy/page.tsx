@@ -1,4 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description:
+    'LXNUYYHYI Privacy Policy. Learn how we collect, use, and protect your personal information when you use our vision board image pack services.',
+  alternates: {
+    canonical: '/privacy',
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (

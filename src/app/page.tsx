@@ -51,25 +51,36 @@ export default async function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-secondary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-foreground leading-tight">
+      <section className="relative overflow-hidden min-h-[500px] sm:min-h-[600px] flex items-center">
+        <img
+          src="https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_46a979f1-c4cf-41f6-b82d-a16182a98a37.jpeg?sign=1812544377-3d0265dfb1-0-a682b895c6e95b424aac23784988f5ee037eac2415b9326e2073887daf058e3"
+          alt="Vision Board Inspiration"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32 w-full">
+          <div className="max-w-2xl">
+            <p className="text-warm-gold font-medium tracking-widest uppercase text-sm mb-4">LXNUYYHYI</p>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-white leading-tight">
               Manifest Your Dreams
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed">
+            <p className="mt-6 text-lg sm:text-xl text-white/80 leading-relaxed">
               Beautiful, high-quality vision board image packs designed to inspire and motivate.
               Download, print, and create the life you envision.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="mt-10 flex flex-col sm:flex-row items-start gap-4">
               <Link
                 href="#categories"
-                className="inline-flex items-center px-8 py-3.5 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity"
+                className="inline-flex items-center px-8 py-3.5 bg-white text-foreground rounded-full font-medium hover:bg-white/90 transition-colors"
               >
                 Browse Collections
               </Link>
-              <p className="text-sm text-muted-foreground">
-                Instant download &middot; Print-ready &middot; High resolution
+              <p className="text-sm text-white/60 flex items-center gap-3">
+                <span>Instant download</span>
+                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span>Print-ready</span>
+                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span>High resolution</span>
               </p>
             </div>
           </div>
@@ -119,7 +130,7 @@ export default async function HomePage() {
             <Link
               key={cat.id}
               href={`/category/${cat.slug}`}
-              className="group relative rounded-2xl overflow-hidden bg-card border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+              className="group rounded-2xl overflow-hidden bg-card border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
               <div className="aspect-[4/3] relative overflow-hidden">
                 <img
@@ -127,17 +138,16 @@ export default async function HomePage() {
                   alt={cat.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                  <h3 className="text-lg font-serif font-semibold">{cat.name}</h3>
-                  <p className="text-sm text-white/80 mt-1">{cat.image_count} images</p>
-                </div>
               </div>
-              <div className="p-4 flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Full pack</span>
-                <span className="text-lg font-bold text-warm-gold">
-                  ${(cat.price_cents / 100).toFixed(2)}
-                </span>
+              <div className="p-5">
+                <h3 className="text-lg font-serif font-semibold text-foreground leading-snug">{cat.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{cat.image_count} images &middot; Full pack</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Download ZIP</span>
+                  <span className="text-xl font-bold text-warm-gold">
+                    ${(cat.price_cents / 100).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}
@@ -172,12 +182,21 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-xl font-serif font-bold tracking-wider text-foreground">LXNUYYHYI</span>
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} LXNUYYHYI. All rights reserved.
-            </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-8">
+            <div>
+              <span className="text-xl font-serif font-bold tracking-wider text-foreground">LXNUYYHYI</span>
+              <p className="text-sm text-muted-foreground mt-2">Premium vision board image packs for manifesting your dreams.</p>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+              <Link href="/license" className="hover:text-foreground transition-colors">Commercial License</Link>
+              <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-border text-center text-sm text-muted-foreground">
+            &copy; {new Date().getFullYear()} LXNUYYHYI. All rights reserved.
           </div>
         </div>
       </footer>

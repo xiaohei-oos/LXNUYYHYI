@@ -65,8 +65,8 @@ export default async function HomePage() {
               Manifest Your Dreams
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-foreground/70 leading-relaxed">
-              Beautiful, high-quality vision board image packs designed to inspire and motivate.
-              Download, print, and create the life you envision.
+              Curated high-resolution image packs to bring your vision board to life.
+              Download instantly, print at home, and start manifesting.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-start gap-4">
               <Link
@@ -107,7 +107,7 @@ export default async function HomePage() {
               <svg className="w-5 h-5 text-warm-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              300dpi Print-Ready
+              Print-Ready 300dpi
             </div>
           </div>
         </div>
@@ -141,13 +141,10 @@ export default async function HomePage() {
               </div>
               <div className="p-4 sm:p-5">
                 <h3 className="text-base sm:text-lg font-serif font-semibold text-foreground leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem]">{cat.name}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">{cat.image_count} images &middot; Full pack</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">{cat.image_count} Prints &middot; Full Bundle</p>
                 <div className="mt-3 flex items-end justify-between gap-2">
-                  <div>
-                    <span className="text-lg sm:text-xl font-bold text-warm-gold">${(cat.price_cents / 100).toFixed(2)}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">{cat.image_count} images included</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0">ZIP Download</span>
+                  <span className="text-lg sm:text-xl font-bold text-warm-gold">${(cat.price_cents / 100).toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0">Instant Download</span>
                 </div>
               </div>
             </Link>
@@ -170,7 +167,7 @@ export default async function HomePage() {
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">2</div>
               <h3 className="font-semibold text-foreground mb-2">Secure Checkout</h3>
-              <p className="text-sm text-muted-foreground">Pay securely with Stripe. Credit cards, Apple Pay & more.</p>
+              <p className="text-sm text-muted-foreground">Secure checkout with Stripe. All major cards, Apple Pay & Google Pay accepted.</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">3</div>

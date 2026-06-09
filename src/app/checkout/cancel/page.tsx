@@ -10,9 +10,9 @@ export default function CheckoutCancelPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="text-2xl font-serif font-bold text-foreground mb-2">Payment Cancelled</h1>
+          <h1 className="text-2xl font-serif font-bold text-foreground mb-2">Checkout Canceled</h1>
           <p className="text-muted-foreground mb-6">
-            Your payment was not completed. You can try again whenever you are ready.
+            No worries — you can come back and complete your purchase anytime.
           </p>
           <Link
             href="/"

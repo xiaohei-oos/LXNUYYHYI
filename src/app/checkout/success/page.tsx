@@ -65,13 +65,13 @@ export default async function CheckoutSuccessPage({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-serif font-bold text-foreground mb-2">Payment Successful!</h1>
+              <h1 className="text-2xl font-serif font-bold text-foreground mb-2">Order Confirmed!</h1>
               <p className="text-muted-foreground mb-6">
-                Your <strong>{ord.category_name}</strong> collection is ready to download.
+                Your <strong>{ord.category_name}</strong> collection is ready for download.
               </p>
               <div className="bg-secondary rounded-xl p-4 mb-6 text-left">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Collection</span>
+                  <span className="text-muted-foreground">Pack</span>
                   <span className="font-medium text-foreground">{ord.category_name}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">

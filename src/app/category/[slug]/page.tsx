@@ -102,9 +102,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Complete Collection Pack</h2>
+            <h2 className="text-xl font-semibold text-foreground">Full Collection Bundle</h2>
             <p className="mt-2 text-muted-foreground text-sm">
-              {cat.image_count} high-resolution images &middot; 300dpi print-ready &middot; Instant ZIP download
+              {cat.image_count} hi-res images &middot; 300dpi print-ready &middot; Instant ZIP download
             </p>
             <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">

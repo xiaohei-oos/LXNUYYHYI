@@ -23,7 +23,7 @@ export default function CategoryBuyClient({ categoryId, categoryName, priceCents
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || 'Failed to create checkout session');
+        alert(data.error || 'Unable to start checkout. Please try again.');
         setLoading(false);
       }
     } catch {
@@ -38,7 +38,7 @@ export default function CategoryBuyClient({ categoryId, categoryName, priceCents
       disabled={loading}
       className="px-6 py-3 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
     >
-      {loading ? 'Redirecting...' : 'Buy & Download'}
+      {loading ? 'Redirecting to Checkout...' : 'Buy & Download'}
     </button>
   );
 }

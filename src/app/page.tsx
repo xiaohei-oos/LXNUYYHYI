@@ -145,7 +145,7 @@ export default async function HomePage() {
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground uppercase tracking-wide">Download ZIP</span>
                   <span className="text-lg sm:text-xl font-bold text-warm-gold">
-                    ${(cat.price_cents / 100).toFixed(2)}
+                    ${(cat.price_cents / 100).toFixed(2)}<span className="text-sm font-normal text-muted-foreground"> / {cat.image_count} images</span>
                   </span>
                 </div>
               </div>

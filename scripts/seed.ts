@@ -1,211 +1,202 @@
-import { getSupabaseClient } from '@/storage/database/supabase-client';
-
-const CATEGORY_COVER_IMAGES = [
-  'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_5d8633c1-980d-4d36-a0ba-8beaecf42154.jpeg?sign=1812541081-43d45f5218-0-1561e91bc39c39ffd2fe163a6c8564f40ac1a110282dec14a282d1d9953a60df',
-  'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_0a5300e7-cd8a-4977-8213-c03419a8b451.jpeg?sign=1812541083-d57539c0f0-0-75ee59999e702d9a609967101e161b651188fca4980c205f312e143ef73f5ef4',
-  'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_a5ee02cf-c2b8-4afc-85a5-581ba910dc31.jpeg?sign=1812541082-ee44fc4594-0-4eff1710ce28ae985153cdbda7f20eb45a47a51221d8efe83947fd9323b20b3b',
-  'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_9e3a4047-bc78-458d-902f-1a4ded01c1f1.jpeg?sign=1812541083-4729c25eb8-0-a2dab89617e7a07895a80c932a2e8de1622ca2ac22f2488e68a576684fb4fc5b',
-  'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_fe6df30e-9af2-4b6f-9a8b-6715040b396f.jpeg?sign=1812541087-d544d4b963-0-1c10ea8795a65d1da0660930fc7d9178080e6962b13f6a41f18a62fc56a95369',
-  'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_219ad3eb-1b5d-4400-84f3-4909b74f0d39.jpeg?sign=1812541082-196a227c57-0-b35949dc90a0c3c0037e2a21e4d9ce3a00fed8068a1599e448c0c5601fc1b07d',
-];
-
-const VISION_IMAGES = [
-  // Health & Wellness
-  {
-    title: 'Morning Serenity',
-    description: 'Start each day with calm intention. Let this peaceful vision guide your wellness journey.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_f548fff4-7ee2-4b21-a345-7b76984e44ec.jpeg?sign=1812541112-e6c2deef77-0-7039016908f73676f5ad20ab340907fefd674de383bef77cd0616613d65b599c',
-    tags: ['wellness', 'meditation', 'peace', 'morning'],
-    is_featured: true,
-  },
-  {
-    title: 'Vitality & Strength',
-    description: 'Embrace the energy of a healthy, active life. Your body is your temple.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_5bf8aba6-49f1-42cc-b4dd-c615ab8a9c2e.jpeg?sign=1812541112-6f3978b6c6-0-afd34d5fa97239036692f3d8afafed978c0ec5997ef8c6d29099b4fd71af466b',
-    tags: ['fitness', 'strength', 'health', 'energy'],
-    is_featured: false,
-  },
-  {
-    title: 'Inner Balance',
-    description: 'Find your center. Balance mind, body, and spirit for complete wellness.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_0551ac05-5953-4c5d-8fed-c7773b4fb64a.jpeg?sign=1812541115-4c4e805f-0-c0367a3a6b1ee27fbd277eb38c1bb95d9e8d6fbb8c6428d44125e2f0a9969cda',
-    tags: ['balance', 'yoga', 'mindfulness', 'harmony'],
-    is_featured: true,
-  },
-  // Wealth & Abundance
-  {
-    title: 'Golden Abundance',
-    description: 'Open your life to unlimited abundance. Wealth flows where attention goes.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_668b300f-f618-4f86-8d2d-482512692f93.jpeg?sign=1812541111-c05d00135d-0-ab9c071be041433128fa0eca7ccddd6cd7df148221961ca19c314d940a87eb81',
-    tags: ['wealth', 'abundance', 'prosperity', 'gold'],
-    is_featured: true,
-  },
-  {
-    title: 'Prosperity Mindset',
-    description: 'Think rich, live rich. Your mindset shapes your financial reality.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_05d5628b-e284-4f97-a6c4-a992dd9f34f0.jpeg?sign=1812541112-98f564f678-0-53f779d48bcf6b8e962d357c89fc7263364f7b22ce32af7e9a0e12581f55c223',
-    tags: ['prosperity', 'mindset', 'success', 'growth'],
-    is_featured: false,
-  },
-  {
-    title: 'Financial Freedom',
-    description: 'Visualize the freedom that comes with financial independence.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_67707f73-4629-426b-a5e6-05d39494721a.jpeg?sign=1812541113-63eef5cea9-0-a8c55c69f8e1af46a6628b9442135ec44023a58755e8663bb018e8906fc6d083',
-    tags: ['freedom', 'finance', 'independence', 'wealth'],
-    is_featured: true,
-  },
-  // Love & Relationships
-  {
-    title: 'Heart Connection',
-    description: 'Open your heart to deep, meaningful connections. Love is all around.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_96862de9-55a8-4b70-aec4-eac7dbf0f632.jpeg?sign=1812541111-8929d6ab97-0-2a10ce680ab168a47a5dae328f8db4836be289e3d639aa85a4b5d30496adec66',
-    tags: ['love', 'connection', 'heart', 'romance'],
-    is_featured: true,
-  },
-  {
-    title: 'Eternal Bond',
-    description: 'Nurture the relationships that matter most. Love grows with intention.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_fcede5e8-3cbd-414b-a6b5-fc12b85ec05a.jpeg?sign=1812541112-c4adb7006d-0-d04dcf85411cc71a5e481d31d25cebbf81e21330c155278c3364a1548a7e8ebb',
-    tags: ['bond', 'partnership', 'eternal', 'commitment'],
-    is_featured: false,
-  },
-  {
-    title: 'Self Love First',
-    description: 'Before loving others, love yourself completely. You are worthy.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_fc2ed9f4-d15d-4d96-b95a-fcb9d0b71099.jpeg?sign=1812541112-044e379388-0-0af8d154eb0a3f4d41e67938947ecbd3b5138a979ee7f127f16e75aa2da82932',
-    tags: ['self-love', 'worthiness', 'care', 'compassion'],
-    is_featured: true,
-  },
-  // Career & Success
-  {
-    title: 'Rise & Conquer',
-    description: 'Your career is a mountain worth climbing. Every step takes you higher.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_ae5cb0ae-a7b0-4355-bd12-4f6df6888284.jpeg?sign=1812541111-712b7b11a9-0-3262bd1eb4bd13fd4b90436a36896c3670340d46ca70625a7b2236d265d65003',
-    tags: ['career', 'ambition', 'success', 'leadership'],
-    is_featured: true,
-  },
-  {
-    title: 'Dream Job Vision',
-    description: 'Visualize your ideal career. When you see it, you can achieve it.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_7f099120-4977-40ce-b018-79c86a230bd0.jpeg?sign=1812541112-49abc18777-0-801b7f4e0ea3b26e6b670e7e486145d7ba22ecf45d21f26167817be6230425f3',
-    tags: ['dream-job', 'vision', 'professional', 'growth'],
-    is_featured: false,
-  },
-  {
-    title: 'Breakthrough Moment',
-    description: 'That moment when everything clicks. Your breakthrough is coming.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_e3d54d80-746a-438c-8c0f-d7324c821f97.jpeg?sign=1812541120-5650e2694e-0-11cdfcbc1f5cd8520f3ff95ed3e5f827be05bf8301403a89e6c0919afbeb16c1',
-    tags: ['breakthrough', 'achievement', 'milestone', 'success'],
-    is_featured: true,
-  },
-  // Travel & Adventure
-  {
-    title: 'Wanderlust Dreams',
-    description: 'The world is your playground. Every destination is a new chapter.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_bdf6c475-54f7-4a4d-85b1-e3d3a49044be.jpeg?sign=1812541112-fa85f36468-0-e7dc53179707bf60d005d1a1a2b499c7be804e808c8338d9a5e624a418dbefdf',
-    tags: ['travel', 'wanderlust', 'adventure', 'explore'],
-    is_featured: true,
-  },
-  {
-    title: 'Horizon Chaser',
-    description: 'Chase new horizons. Life begins at the edge of your comfort zone.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_90b09213-e328-4794-b4de-ffc6578669c8.jpeg?sign=1812541113-e066670cde-0-ef96f9e150ec78e560bd6d219b547929fb6ebc35d36b0ca09adaf60ffdfc3cc1',
-    tags: ['horizon', 'journey', 'freedom', 'nature'],
-    is_featured: false,
-  },
-  {
-    title: 'Adventure Awaits',
-    description: 'Pack your dreams and go. Adventure is out there waiting for you.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_5b482781-8eeb-46c3-90fc-e7aea00e5f44.jpeg?sign=1812541114-16b0a8e74b-0-22d62de0bfe49991e82f8a9edba8e4e49c91e5df2a6d4534e473bd95d1400bef',
-    tags: ['adventure', 'explore', 'discover', 'courage'],
-    is_featured: true,
-  },
-  // Personal Growth
-  {
-    title: 'Bloom & Grow',
-    description: 'Like a flower, you are always growing. Embrace each season of change.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_ea2246dd-a1db-4627-b400-115f3177956c.jpeg?sign=1812541113-f120d08ccf-0-36813296d148f7299bee4c468674ee9d38149272ba77ed4c48de89eb6877ac2d',
-    tags: ['growth', 'bloom', 'transformation', 'evolution'],
-    is_featured: true,
-  },
-  {
-    title: 'Rise Above',
-    description: 'Elevate your perspective. Growth happens when you rise above limitations.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_c235646e-1906-44e8-a6eb-955cd8f298f3.jpeg?sign=1812541142-23d8c5a75f-0-eb8069aa8251691b562a3d3daa6e4484e60a384be14d979ec093a643fb2918d6',
-    tags: ['elevation', 'perspective', 'mindset', 'freedom'],
-    is_featured: false,
-  },
-  {
-    title: 'New Dawn',
-    description: 'Every sunrise is a fresh start. Today is the day you begin again.',
-    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_5d3171a7-fd9c-46fc-ae50-ed34959bd0d5.jpeg?sign=1812541144-72d325a42f-0-ce3271bf9b4fa7d28cbacef50a50b035f2b0397702ed18ece518e318683c80a0',
-    tags: ['dawn', 'beginning', 'fresh-start', 'hope'],
-    is_featured: true,
-  },
-];
+import { getSupabaseClient } from '../src/storage/database/supabase-client';
 
 const CATEGORIES = [
-  { name: 'Health & Wellness', slug: 'health-wellness', description: 'Nurture your body and soul with wellness visions that inspire healthy living and inner peace.', sort_order: 1 },
-  { name: 'Wealth & Abundance', slug: 'wealth-abundance', description: 'Attract prosperity and financial freedom with abundance-focused vision board art.', sort_order: 2 },
-  { name: 'Love & Relationships', slug: 'love-relationships', description: 'Manifest deep connections and loving relationships with heartfelt vision imagery.', sort_order: 3 },
-  { name: 'Career & Success', slug: 'career-success', description: 'Visualize your professional triumphs and climb the ladder of success with purpose.', sort_order: 4 },
-  { name: 'Travel & Adventure', slug: 'travel-adventure', description: 'Dream of exotic destinations and thrilling adventures that expand your world.', sort_order: 5 },
-  { name: 'Personal Growth', slug: 'personal-growth', description: 'Embrace transformation and continuous growth on your journey to becoming your best self.', sort_order: 6 },
+  {
+    name: 'Wealth & Finance',
+    name_cn: '财富与财务',
+    slug: 'wealth-finance',
+    description: 'Attract prosperity and financial freedom with abundance-focused vision board art. From passive income to debt-free living.',
+    description_cn: '用专注丰盛的愿景板艺术吸引繁荣和财务自由。从被动收入到无债生活。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_7943ad1b-39e9-4dd4-a984-d93c119645ad.jpeg?sign=1812544280-4545233f42-0-07090f0ea8ba24ef63978f47bcde8b44450e8873d49bcd19347ccb8f3e0f3cab',
+    price_cents: 1499,
+    sort_order: 1,
+  },
+  {
+    name: 'Travel & Adventure',
+    name_cn: '旅行与探索',
+    slug: 'travel-adventure',
+    description: 'Visualize your dream destinations and adventurous journeys. From tropical escapes to mountain expeditions.',
+    description_cn: '想象您的梦想目的地和冒险旅程。从热带度假到山地探险。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_b06be7de-656c-42a3-9094-3b2e9fe4e420.jpeg?sign=1812544278-52e4cc7dbb-0-89182b86ae54f05bfb3db17dcb8967d12863d630315158c222f0bcd5638cea23',
+    price_cents: 1299,
+    sort_order: 2,
+  },
+  {
+    name: 'Health & Fitness',
+    name_cn: '健康与健身',
+    slug: 'health-fitness',
+    description: 'Manifest your healthiest self with fitness goals, wellness routines, and body-positive vision board art.',
+    description_cn: '用健身目标、健康习惯和积极身体形象的愿景板艺术，显化最健康的自己。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_3e894e45-16a2-47df-9400-b691d83b6dfa.jpeg?sign=1812544279-c80de0683c-0-2f966f08d3ff049dd3791595ecdaf2993906c75908fda2246b7cc0c1542c842c',
+    price_cents: 1299,
+    sort_order: 3,
+  },
+  {
+    name: 'Career & Business',
+    name_cn: '职业与事业',
+    slug: 'career-business',
+    description: 'Level up your professional life with career goals, business growth, and success-focused vision board art.',
+    description_cn: '用职业目标、业务增长和成功导向的愿景板艺术，提升您的职业生涯。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_fd10ecc3-117a-495d-bb64-958bb002af22.jpeg?sign=1812544280-759a6c848b-0-9d38f1ab50e426a57ec20d6d73ae121bb50a3ff47e12f957b27d0bd6e65f1b10',
+    price_cents: 1499,
+    sort_order: 4,
+  },
+  {
+    name: 'Self-Love & Personal Growth',
+    name_cn: '自爱与成长',
+    slug: 'self-love-growth',
+    description: 'Embrace self-love and personal development with inspiring vision board art for confidence, mindfulness, and growth.',
+    description_cn: '用充满启发的愿景板艺术拥抱自爱与个人成长，提升自信、正念和成长。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_21de2e50-bb62-4d73-b46e-169f3cf4fae6.jpeg?sign=1812544278-9737b30e58-0-be4b0df7778c6af0d6a7a4caaa112a3c5bf64b6985f79d6e2cf3d563baa63818',
+    price_cents: 1299,
+    sort_order: 5,
+  },
+  {
+    name: 'Family & Relationship',
+    name_cn: '家庭与关系',
+    slug: 'family-relationship',
+    description: 'Strengthen your bonds with vision board art for love, family harmony, and meaningful relationships.',
+    description_cn: '用关于爱情、家庭和睦和有意义关系的愿景板艺术，加强您的纽带。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_f93b7508-ad2b-4ac6-bd36-4338df248c48.jpeg?sign=1812544277-43e6c1e699-0-0f859674af699f0a113ad766128299662459a157bd173e3371a1f7079a91efaa',
+    price_cents: 1299,
+    sort_order: 6,
+  },
+  {
+    name: 'Home & Living',
+    name_cn: '居家生活',
+    slug: 'home-living',
+    description: 'Create your dream living space with vision board art for home decor, minimalist living, and cozy interiors.',
+    description_cn: '用关于家居装饰、极简生活和舒适室内的愿景板艺术，打造您的梦想居住空间。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_fddec436-50df-4d6e-a917-4be1d6347b62.jpeg?sign=1812544277-ee4b7c4659-0-493c38291fd9d604764a38cdf712e635d29536731a426a77da0b5b07b9324648',
+    price_cents: 1299,
+    sort_order: 7,
+  },
+  {
+    name: 'Spiritual & Manifestation',
+    name_cn: '灵性与显化',
+    slug: 'spiritual-manifestation',
+    description: 'Align with the universe through manifestation art, law of attraction visuals, and spiritual growth imagery.',
+    description_cn: '通过显化艺术、吸引力法则视觉和灵性成长图像，与宇宙对齐。',
+    cover_image: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_5ce9f406-9efa-4062-a5e4-cd9df1cc4b34.jpeg?sign=1812544278-ce1e39be08-0-3dbbbee2ae9780cb58d0718e6e23b61213c3b443cae0df9547959d48aa4a45e7',
+    price_cents: 1299,
+    sort_order: 8,
+  },
 ];
+
+const IMAGES: Record<string, Array<{ title: string; title_cn: string; thumbnail_url: string }>> = {
+  'wealth-finance': [
+    { title: 'Abundance Mindset', title_cn: '丰盛心态', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_91af3aee-eeff-4a5a-8694-427c9a4c1284.jpeg?sign=1812544310-616f06f74b-0-da0e8b50723637ead804d10c44c72a3894b61762bf3df075fe9932b610038240' },
+    { title: 'Financial Freedom', title_cn: '财务自由', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_61b1dc10-b7d7-46c2-a4f9-91bbfa455e0b.jpeg?sign=1812544312-2e629e8d62-0-dcbd757720a0a5e1ef05a06120bcc6355c7068798bdcd4fefe31be8d40ec205b' },
+    { title: 'Passive Income Vision', title_cn: '被动收入愿景', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_9cd0e04e-b696-4d62-b634-1c4339f30851.jpeg?sign=1812544315-b999e9f5da-0-a2c19de6149e559bf7cb01268a2b1152507495c0de37431ddf132ffd36ba97ce' },
+  ],
+  'travel-adventure': [
+    { title: 'Dream Destinations', title_cn: '梦想目的地', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_02f6f5fe-2c4f-48ba-a944-e2fe5fa55339.jpeg?sign=1812544312-64129feab6-0-0c8f2ef6922920069bde050a26d3dfec6d65ea3af677b53776027a795db17265' },
+    { title: 'Adventure Awaits', title_cn: '冒险在等待', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_4e584d51-45a4-4365-ac8c-d9813205d593.jpeg?sign=1812544316-2fe44f2dc7-0-b77289f79cd6eaf4ab3515c8215da32c834d79d80ca12302380892775d2f1496' },
+    { title: 'Wanderlust Spirit', title_cn: '旅行精神', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_76263a87-9d2f-494b-b70c-93a1e8c83693.jpeg?sign=1812544318-11f9aef946-0-280c7ed9941fd01c58a7fdd9095da23de8f8f78dd941d074f7c3ca264cedc69f' },
+  ],
+  'health-fitness': [
+    { title: 'Fitness Goals', title_cn: '健身目标', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_546f907d-611d-4207-b860-155855e31f60.jpeg?sign=1812544315-5ac0b52c26-0-b2480dbcfb3d6be5062dc46f80547c9b703b4de2c3eedfb6d482f221a7b70678' },
+    { title: 'Healthy Living', title_cn: '健康生活', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_7c9b4f94-031b-4c6d-9fb4-77738efca8d1.jpeg?sign=1812544316-ae1a149068-0-a9fdc1ecc0e3d09e707e468defd89722853e01688d32101dc33341dbbc9c8a66' },
+    { title: 'Wellness Journey', title_cn: '健康之旅', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_7ebbd673-f147-4abe-a835-3aae44f773f2.jpeg?sign=1812544317-04b49c4bdc-0-9ba806b8ec36ed5d5e6a03745301619cecda26e8a8d8311656256a6fc14f2824' },
+  ],
+  'career-business': [
+    { title: 'Career Success', title_cn: '职业成功', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_edb5749d-738a-407f-a378-a920ca0de8f8.jpeg?sign=1812544313-074568eab4-0-1e33e38b19cf812b2a87e13559aea42cb5a27d9f3903f7cda9f10a72dd1c479a' },
+    { title: 'Business Growth', title_cn: '业务增长', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_471da0b6-d290-4f1c-92e8-cf82f8dd5b84.jpeg?sign=1812544315-c889826d94-0-4de4aab8f6982b0ceb426fba57785bbb88464f141f51ecfd83f5736282c6852a' },
+    { title: 'Dream Job', title_cn: '梦想工作', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_cd885d3b-2d71-4582-b5eb-0ceae8fe0ce5.jpeg?sign=1812544321-d5d246b531-0-d651953819efe6bcb33d9d5b53d8e901a62b13394d2ee54663accf2cf510869e' },
+  ],
+  'self-love-growth': [
+    { title: 'Self Care Rituals', title_cn: '自我关怀仪式', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_ab2108e4-4556-447d-8225-ee5d8c5159ec.jpeg?sign=1812544348-27e0e84479-0-0ea2396f502c26e880a278b70ed10a72bc29b4c8015a091f87523ade69a94b17' },
+    { title: 'Inner Strength', title_cn: '内在力量', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_3454eca9-ea37-40a0-8642-8943abd4997a.jpeg?sign=1812544357-37f6b03c6d-0-ffa184e36351b7aa0f396a857f57f6333bd96749c14312520f3d9b7802665949' },
+    { title: 'Mindful Growth', title_cn: '正念成长', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_1202bb93-3fad-4975-98a0-2da596b58cf5.jpeg?sign=1812544358-6941efe3ae-0-cf31911cc8310785515b3865dee5b83c79248a1b19792b036d5bab7c8e6ccbeb' },
+  ],
+  'family-relationship': [
+    { title: 'Love & Harmony', title_cn: '爱与和谐', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_a6034a01-758d-4531-a6b4-dd6a56a899b4.jpeg?sign=1812544349-e884e1b1ac-0-7b359803d60b1960483a1f7a333c5881ad5a537c2f973f5bb8522a72771170d0' },
+    { title: 'Family Bonds', title_cn: '家庭纽带', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_8a377f0f-ddbd-4517-9c88-0c469ed4595c.jpeg?sign=1812544353-3e99306758-0-e88b06c8a7d2eee805b74c32ac63837265812a353136946a2f077b3304b3596d' },
+    { title: 'Heart Connection', title_cn: '心灵连接', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_9603d2de-a88b-4c20-8e7f-f8df668df737.jpeg?sign=1812544357-7c5df9607b-0-e78d6f1bf76327912b5bc9639e89c56855bd4843a67922760d6d141310375e52' },
+  ],
+  'home-living': [
+    { title: 'Dream Home', title_cn: '梦想家园', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_9329b840-5193-405e-a1d1-642e3be4ef13.jpeg?sign=1812544347-6a315b6302-0-cf605d19cadb6bd5e7ce683da6e7a45d22c0136d4bcf5f44c88f0f5e4deec069' },
+    { title: 'Cozy Living', title_cn: '舒适生活', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_b81ef9fb-791f-4a18-92d1-6c209c55df4b.jpeg?sign=1812544353-32b6cf74e8-0-6cca5a95277a2d1dd25738dbc843c09cd389131ecc8b509ec7bb1bafc1e7ea04' },
+    { title: 'Minimalist Space', title_cn: '极简空间', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_ab7290fe-6ae4-4e6d-93c2-fcc5ea3f888c.jpeg?sign=1812544357-a924bd6b2d-0-c000998e9e312099561ed32665aecde786214a6238283f3eaead252d69701b0b' },
+  ],
+  'spiritual-manifestation': [
+    { title: 'Law of Attraction', title_cn: '吸引力法则', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_5f468031-c432-4e4f-9d40-ad69c97c8780.jpeg?sign=1812544347-035648f7b1-0-23cc02213e87f592ecb86ca7ddfaa6db69fd523ea9b1d6e8179a5c6d0b09d460' },
+    { title: 'Cosmic Energy', title_cn: '宇宙能量', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_6c9d138d-f9ea-43d3-8616-8c0d33c60faf.jpeg?sign=1812544353-5702a6b736-0-401fd1364cd5513f3b630bcfd4033f8523a6f0d975c7e89387920b1f5e57ef37' },
+    { title: 'Sacred Space', title_cn: '神圣空间', thumbnail_url: 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_63ae447a-3bb5-49c2-a2e4-0be9366b78d4.jpeg?sign=1812544353-1e4c129918-0-ad62bc8208703411237a384040ecf4e44b1cad0fff4bf3665fdde0070b16082a' },
+  ],
+};
 
 async function seed() {
   const client = getSupabaseClient();
 
+  // Clear existing data
+  await client.from('vision_images').delete().neq('id', '');
+  await client.from('orders').delete().neq('id', '');
+  await client.from('categories').delete().neq('id', '');
+
+  console.log('Seeding categories...');
+
   // Insert categories
-  const categoryData = CATEGORIES.map((cat, i) => ({
-    ...cat,
-    cover_image: CATEGORY_COVER_IMAGES[i],
-  }));
+  const categoryIds: Record<string, string> = {};
+  for (const cat of CATEGORIES) {
+    const { data, error } = await client
+      .from('categories')
+      .insert({
+        name: cat.name,
+        name_cn: cat.name_cn,
+        slug: cat.slug,
+        description: cat.description,
+        description_cn: cat.description_cn,
+        cover_image: cat.cover_image,
+        price_cents: cat.price_cents,
+        image_count: (IMAGES[cat.slug] || []).length,
+        sort_order: cat.sort_order,
+      })
+      .select('id, slug')
+      .single();
 
-  const { data: insertedCategories, error: catError } = await client
-    .from('categories')
-    .upsert(categoryData, { onConflict: 'slug' })
-    .select();
-
-  if (catError) {
-    throw new Error(`Failed to insert categories: ${catError.message}`);
+    if (error) {
+      console.error(`Failed to insert category ${cat.name}:`, error);
+    } else if (data) {
+      categoryIds[data.slug] = data.id;
+      console.log(`  Created: ${cat.name} (${cat.name_cn})`);
+    }
   }
 
-  console.log(`Inserted ${insertedCategories.length} categories`);
+  console.log('\nSeeding images...');
 
-  // Insert vision images
-  const imagesPerCategory = 3;
-  const imageData = VISION_IMAGES.map((img, i) => {
-    const catIndex = Math.floor(i / imagesPerCategory);
-    const category = insertedCategories[catIndex];
-    return {
-      title: img.title,
-      description: img.description,
-      category_id: category.id,
-      thumbnail_url: img.url,
-      hd_image_key: `hd/${category.slug}/${img.title.toLowerCase().replace(/\s+/g, '-')}.jpg`,
-      price_cents: img.is_featured ? 499 : 299,
-      aspect_ratio: '4:3',
-      print_size: img.is_featured ? '16x20 in' : '8x10 in',
-      tags: img.tags,
-      is_featured: img.is_featured,
-      status: 'active',
-    };
-  });
+  // Insert images
+  for (const [slug, images] of Object.entries(IMAGES)) {
+    const categoryId = categoryIds[slug];
+    if (!categoryId) {
+      console.error(`  Category not found for slug: ${slug}`);
+      continue;
+    }
 
-  const { data: insertedImages, error: imgError } = await client
-    .from('vision_images')
-    .insert(imageData)
-    .select();
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      const { error } = await client
+        .from('vision_images')
+        .insert({
+          category_id: categoryId,
+          title: img.title,
+          title_cn: img.title_cn,
+          thumbnail_url: img.thumbnail_url,
+          hd_image_key: `hd/${slug}/${img.title.toLowerCase().replace(/\s+/g, '-')}.jpg`,
+          sort_order: i + 1,
+        });
 
-  if (imgError) {
-    throw new Error(`Failed to insert images: ${imgError.message}`);
+      if (error) {
+        console.error(`  Failed to insert image ${img.title}:`, error);
+      } else {
+        console.log(`  Created: ${img.title} (${img.title_cn}) → ${slug}`);
+      }
+    }
   }
 
-  console.log(`Inserted ${insertedImages.length} vision images`);
+  console.log('\nSeed completed!');
+  console.log(`Categories: ${Object.keys(categoryIds).length}`);
+  console.log(`Images: ${Object.values(IMAGES).flat().length}`);
 }
 
-seed().catch((err) => {
-  console.error('Seed failed:', err);
-  process.exit(1);
-});
+seed().catch(console.error);

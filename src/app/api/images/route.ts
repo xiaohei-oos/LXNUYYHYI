@@ -1,52 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = request.nextUrl;
-    const category = searchParams.get('category');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const featured = searchParams.get('featured');
+export const dynamic = 'force-dynamic';
 
-    const client = getSupabaseClient();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const categorySlug = searchParams.get('category');
+  const limit = parseInt(searchParams.get('limit') || '20', 10);
+  const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    let query = client
-      .from('vision_images')
-      .select('*')
-      .eq('status', 'active');
+  const client = getSupabaseClient();
 
-    if (category) {
-      // Look up category ID by slug
-      const { data: catData, error: catError } = await client
-        .from('categories')
-        .select('id')
-        .eq('slug', category)
-        .maybeSingle();
+  let query = client
+    .from('vision_images')
+    .select('*, categories(name, slug)')
+    .order('sort_order', { ascending: true })
+    .range(offset, offset + limit - 1);
 
-      if (catError) throw new Error(`Failed to fetch category: ${catError.message}`);
-      if (catData) {
-        query = query.eq('category_id', catData.id);
-      }
+  if (categorySlug) {
+    // First get category id
+    const { data: cat } = await client
+      .from('categories')
+      .select('id')
+      .eq('slug', categorySlug)
+      .maybeSingle();
+
+    if (cat) {
+      query = query.eq('category_id', cat.id);
     }
-
-    if (featured === 'true') {
-      query = query.eq('is_featured', true);
-    }
-
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    const { data, error } = await query
-      .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: false })
-      .range(from, to);
-
-    if (error) throw new Error(`Failed to fetch images: ${error.message}`);
-
-    return NextResponse.json({ images: data, page, limit });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch images';
-    return NextResponse.json({ error: message }, { status: 500 });
   }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ images: data });
 }

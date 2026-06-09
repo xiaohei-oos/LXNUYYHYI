@@ -1,248 +1,182 @@
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
+
+export const dynamic = 'force-dynamic';
 
 interface Category {
   id: string;
   name: string;
+  name_cn: string;
   slug: string;
   description: string;
   cover_image: string;
+  image_count: number;
+  price_cents: number;
   sort_order: number;
 }
 
-interface VisionImage {
-  id: string;
-  title: string;
-  description: string;
-  category_id: string;
-  thumbnail_url: string;
-  price_cents: number;
-  is_featured: boolean;
-  print_size: string;
-  tags: string;
-}
-
-interface CategoryWithCount extends Category {
-  image_count: number;
-}
-
-async function getCategories(): Promise<CategoryWithCount[]> {
-  const { getSupabaseClient } = await import('@/storage/database/supabase-client');
+export default async function HomePage() {
   const client = getSupabaseClient();
-
-  const { data: categories, error: catError } = await client
+  const { data: categories } = await client
     .from('categories')
     .select('*')
     .order('sort_order', { ascending: true });
 
-  if (catError) throw new Error(`Failed to fetch categories: ${catError.message}`);
-
-  const { data: images, error: imgError } = await client
-    .from('vision_images')
-    .select('category_id')
-    .eq('status', 'active');
-
-  if (imgError) throw new Error(`Failed to fetch image counts: ${imgError.message}`);
-
-  const countMap = new Map<string, number>();
-  for (const img of images ?? []) {
-    countMap.set(img.category_id, (countMap.get(img.category_id) ?? 0) + 1);
-  }
-
-  return (categories as Category[]).map((cat) => ({
-    ...cat,
-    image_count: countMap.get(cat.id) ?? 0,
-  }));
-}
-
-async function getFeaturedImages(): Promise<VisionImage[]> {
-  const { getSupabaseClient } = await import('@/storage/database/supabase-client');
-  const client = getSupabaseClient();
-
-  const { data, error } = await client
-    .from('vision_images')
-    .select('*')
-    .eq('status', 'active')
-    .eq('is_featured', true)
-    .order('created_at', { ascending: false })
-    .limit(8);
-
-  if (error) throw new Error(`Failed to fetch featured images: ${error.message}`);
-  return data as VisionImage[];
-}
-
-export default async function HomePage() {
-  const [categories, featuredImages] = await Promise.all([
-    getCategories(),
-    getFeaturedImages(),
-  ]);
-
-  const heroImage = 'https://coze-coding-project.tos.coze.site/coze_storage_7649351400148795444/image/generate_image_ae84a8d0-5a1d-4bfa-80d2-7f8738f39eb5.jpeg?sign=1812541161-776800e52d-0-62542c9a94d5cb3900cdfb1cd791c1680278103dde3711c07b712222f514da4a';
+  const cats = (categories || []) as Category[];
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-[var(--color-linen)] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="font-serif text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-            VisionDream
-          </Link>
-          <nav className="hidden sm:flex items-center gap-6">
-            <Link href="/#categories" className="text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors">
-              Categories
+    <div className="min-h-screen bg-background">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-2xl font-serif font-bold tracking-wider text-foreground">
+                LXNUYYHYI
+              </span>
             </Link>
-            <Link href="/#featured" className="text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors">
-              Featured
-            </Link>
-          </nav>
+            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
+              {cats.map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/category/${cat.slug}`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {cat.name.split(' & ')[0]}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
-      </header>
+      </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="Vision Board"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-white/40" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
-          <div className="max-w-2xl">
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold leading-tight text-[var(--color-foreground)]">
-              Create Your
-              <br />
-              <span className="text-[var(--color-warm-gold)]">Vision Board</span>
+      <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-secondary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+          <div className="text-center max-w-3xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-foreground leading-tight">
+              Manifest Your Dreams
             </h1>
-            <p className="mt-6 text-lg text-[var(--color-muted-foreground)] leading-relaxed max-w-lg">
-              Beautiful, print-ready vision board images to manifest your dreams.
-              Download, print, and transform your space into a daily reminder of your aspirations.
+            <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed">
+              Beautiful, high-quality vision board image packs designed to inspire and motivate.
+              Download, print, and create the life you envision.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href="/#categories"
-                className="inline-flex items-center justify-center px-6 py-3 bg-[var(--color-foreground)] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity"
+                href="#categories"
+                className="inline-flex items-center px-8 py-3.5 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity"
               >
                 Browse Collections
-                <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
-              <Link
-                href="/#featured"
-                className="inline-flex items-center justify-center px-6 py-3 border border-[var(--color-linen)] rounded-xl text-sm font-medium text-[var(--color-foreground)] hover:bg-[var(--color-secondary)] transition-colors"
-              >
-                View Featured
-              </Link>
+              <p className="text-sm text-muted-foreground">
+                Instant download &middot; Print-ready &middot; High resolution
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Trust Badges */}
-      <section className="border-b border-[var(--color-linen)] bg-white">
+      <section className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-wrap justify-center gap-8 text-sm text-[var(--color-muted-foreground)]">
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[var(--color-warm-gold)]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-              Secure Checkout via Stripe
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[var(--color-warm-gold)]" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" /></svg>
-              High-Resolution Print Quality
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[var(--color-warm-gold)]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-warm-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Secure Payment via Stripe
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-warm-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
               Instant Download
-            </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-warm-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              300dpi Print-Ready
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      {/* Categories Grid */}
+      <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         <div className="text-center mb-12">
-          <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[var(--color-foreground)]">
-            Explore by Category
+          <h2 className="text-3xl sm:text-4xl font-serif font-bold text-foreground">
+            Vision Board Collections
           </h2>
-          <p className="mt-3 text-[var(--color-muted-foreground)] max-w-md mx-auto">
-            Find the perfect images for every area of your life
+          <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+            Each collection includes high-resolution images curated for your vision board.
+            Buy the pack, download the ZIP, and start manifesting.
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((cat) => (
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {cats.map((cat) => (
             <Link
               key={cat.id}
               href={`/category/${cat.slug}`}
-              className="group relative overflow-hidden rounded-2xl aspect-[4/3] bg-[var(--color-secondary)]"
+              className="group relative rounded-2xl overflow-hidden bg-card border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
-              <img
-                src={cat.cover_image}
-                alt={cat.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <h3 className="font-serif text-xl font-semibold text-white">{cat.name}</h3>
-                <p className="mt-1 text-sm text-white/80">{cat.image_count} images</p>
+              <div className="aspect-[4/3] relative overflow-hidden">
+                <img
+                  src={cat.cover_image}
+                  alt={cat.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <h3 className="text-lg font-serif font-semibold">{cat.name}</h3>
+                  <p className="text-sm text-white/80 mt-1">{cat.image_count} images</p>
+                </div>
               </div>
-              <div className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <ArrowRight className="w-4 h-4 text-white" />
+              <div className="p-4 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Full pack</span>
+                <span className="text-lg font-bold text-warm-gold">
+                  ${(cat.price_cents / 100).toFixed(2)}
+                </span>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Featured Images */}
-      <section id="featured" className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[var(--color-foreground)]">
-              Featured Visions
-            </h2>
-            <p className="mt-3 text-[var(--color-muted-foreground)] max-w-md mx-auto">
-              Our most popular and inspiring vision board images
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {featuredImages.map((img) => (
-              <Link
-                key={img.id}
-                href={`/image/${img.id}`}
-                className="group bg-[var(--color-card)] rounded-2xl overflow-hidden border border-[var(--color-linen)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-              >
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    src={img.thumbnail_url}
-                    alt={img.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="font-serif font-medium text-[var(--color-foreground)]">{img.title}</h3>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[var(--color-warm-gold)] font-semibold">
-                      ${(img.price_cents / 100).toFixed(2)}
-                    </span>
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      {img.print_size}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+      {/* How It Works */}
+      <section className="bg-secondary/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+          <h2 className="text-3xl font-serif font-bold text-foreground text-center mb-12">
+            How It Works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">1</div>
+              <h3 className="font-semibold text-foreground mb-2">Choose a Collection</h3>
+              <p className="text-sm text-muted-foreground">Browse our curated vision board packs by theme.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">2</div>
+              <h3 className="font-semibold text-foreground mb-2">Secure Checkout</h3>
+              <p className="text-sm text-muted-foreground">Pay securely with Stripe. Credit cards, Apple Pay & more.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">3</div>
+              <h3 className="font-semibold text-foreground mb-2">Download & Print</h3>
+              <p className="text-sm text-muted-foreground">Download the ZIP file and print your vision board art.</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--color-linen)] bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <span className="font-serif text-lg font-semibold text-[var(--color-foreground)]">VisionDream</span>
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              &copy; {new Date().getFullYear()} VisionDream. All rights reserved.
+      <footer className="border-t border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xl font-serif font-bold tracking-wider text-foreground">LXNUYYHYI</span>
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} LXNUYYHYI. All rights reserved.
             </p>
           </div>
         </div>

@@ -1,188 +1,171 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { notFound } from 'next/navigation';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
+import CategoryBuyClient from './CategoryBuyClient';
+
+export const dynamic = 'force-dynamic';
 
 interface Category {
   id: string;
   name: string;
+  name_cn: string;
   slug: string;
   description: string;
   cover_image: string;
+  image_count: number;
+  price_cents: number;
 }
 
 interface VisionImage {
   id: string;
   title: string;
-  description: string;
-  category_id: string;
   thumbnail_url: string;
-  price_cents: number;
-  is_featured: boolean;
-  print_size: string;
-  tags: string;
-  aspect_ratio: string;
+  sort_order: number;
 }
 
-async function getCategory(slug: string): Promise<Category | null> {
-  const { getSupabaseClient } = await import('@/storage/database/supabase-client');
+export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const client = getSupabaseClient();
 
-  const { data, error } = await client
+  const { data: category } = await client
     .from('categories')
     .select('*')
     .eq('slug', slug)
     .maybeSingle();
 
-  if (error) throw new Error(`Failed to fetch category: ${error.message}`);
-  return data as Category | null;
-}
-
-async function getCategoryImages(categoryId: string): Promise<VisionImage[]> {
-  const { getSupabaseClient } = await import('@/storage/database/supabase-client');
-  const client = getSupabaseClient();
-
-  const { data, error } = await client
-    .from('vision_images')
-    .select('*')
-    .eq('category_id', categoryId)
-    .eq('status', 'active')
-    .order('is_featured', { ascending: false })
-    .order('created_at', { ascending: false });
-
-  if (error) throw new Error(`Failed to fetch images: ${error.message}`);
-  return data as VisionImage[];
-}
-
-async function getAllCategories(): Promise<Category[]> {
-  const { getSupabaseClient } = await import('@/storage/database/supabase-client');
-  const client = getSupabaseClient();
-
-  const { data, error } = await client
-    .from('categories')
-    .select('*')
-    .order('sort_order', { ascending: true });
-
-  if (error) throw new Error(`Failed to fetch categories: ${error.message}`);
-  return data as Category[];
-}
-
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const [category, allCategories] = await Promise.all([
-    getCategory(slug),
-    getAllCategories(),
-  ]);
-
   if (!category) {
-    notFound();
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-serif font-bold text-foreground mb-4">Collection Not Found</h1>
+          <Link href="/" className="text-warm-gold hover:underline">Back to Home</Link>
+        </div>
+      </div>
+    );
   }
 
-  const images = await getCategoryImages(category.id);
+  const cat = category as Category;
+
+  const { data: images } = await client
+    .from('vision_images')
+    .select('id, title, thumbnail_url, sort_order')
+    .eq('category_id', cat.id)
+    .order('sort_order', { ascending: true });
+
+  const imgs = (images || []) as VisionImage[];
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-[var(--color-linen)] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="font-serif text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-            VisionDream
-          </Link>
-          <nav className="hidden sm:flex items-center gap-4">
-            {allCategories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/category/${cat.slug}`}
-                className={`text-sm transition-colors ${
-                  cat.slug === slug
-                    ? 'text-[var(--color-foreground)] font-medium'
-                    : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
-                }`}
-              >
-                {cat.name.split(' & ')[0]}
-              </Link>
-            ))}
-          </nav>
+    <div className="min-h-screen bg-background">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-2xl font-serif font-bold tracking-wider text-foreground">
+                LXNUYYHYI
+              </span>
+            </Link>
+            <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              All Collections
+            </Link>
+          </div>
         </div>
-      </header>
+      </nav>
+
+      {/* Breadcrumb */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+          <span>/</span>
+          <span className="text-foreground">{cat.name}</span>
+        </div>
+      </div>
 
       {/* Category Header */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="relative rounded-2xl overflow-hidden aspect-[21/9]">
           <img
-            src={category.cover_image}
-            alt={category.name}
+            src={cat.cover_image}
+            alt={cat.name}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+          <div className="absolute inset-0 flex items-center p-8 sm:p-12">
+            <div className="text-white max-w-xl">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold">{cat.name}</h1>
+              <p className="mt-4 text-white/80 text-sm sm:text-base leading-relaxed">{cat.description}</p>
+            </div>
+          </div>
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-white/80 hover:text-white transition-colors mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Home
-          </Link>
-          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-white">
-            {category.name}
-          </h1>
-          <p className="mt-3 text-white/80 max-w-lg">{category.description}</p>
-          <p className="mt-2 text-sm text-white/60">{images.length} vision images available</p>
-        </div>
-      </section>
+      </div>
 
-      {/* Image Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {images.map((img) => (
-            <Link
+      {/* Purchase Card */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Complete Collection Pack</h2>
+            <p className="mt-2 text-muted-foreground text-sm">
+              {cat.image_count} high-resolution images &middot; 300dpi print-ready &middot; Instant ZIP download
+            </p>
+            <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4 text-sage-green" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Multiple sizes
+              </span>
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4 text-sage-green" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Commercial use
+              </span>
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4 text-sage-green" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                24h download link
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            <span className="text-3xl font-bold text-warm-gold">${(cat.price_cents / 100).toFixed(2)}</span>
+            <CategoryBuyClient categoryId={cat.id} categoryName={cat.name} priceCents={cat.price_cents} />
+          </div>
+        </div>
+      </div>
+
+      {/* Image Preview Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <h2 className="text-xl font-semibold text-foreground mb-6">
+          Preview ({imgs.length} images)
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {imgs.map((img) => (
+            <div
               key={img.id}
-              href={`/image/${img.id}`}
-              className="group bg-white rounded-2xl overflow-hidden border border-[var(--color-linen)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-secondary border border-border"
             >
-              <div className="aspect-[4/3] overflow-hidden relative">
-                <img
-                  src={img.thumbnail_url}
-                  alt={img.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-                {img.is_featured && (
-                  <span className="absolute top-3 left-3 px-2 py-1 bg-[var(--color-warm-gold)] text-white text-xs font-medium rounded-lg">
-                    Featured
-                  </span>
-                )}
+              <img
+                src={img.thumbnail_url}
+                alt={img.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 right-0 p-3 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p className="text-sm font-medium truncate">{img.title}</p>
               </div>
-              <div className="p-5">
-                <h3 className="font-serif font-medium text-lg text-[var(--color-foreground)]">{img.title}</h3>
-                <p className="mt-1 text-sm text-[var(--color-muted-foreground)] line-clamp-2">{img.description}</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[var(--color-warm-gold)] font-semibold text-lg">
-                    ${(img.price_cents / 100).toFixed(2)}
-                  </span>
-                  <span className="text-xs text-[var(--color-muted-foreground)]">
-                    {img.print_size}
-                  </span>
-                </div>
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
-
-        {images.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-[var(--color-muted-foreground)]">No images available in this category yet.</p>
-          </div>
-        )}
-      </section>
+      </div>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--color-linen)] bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <span className="font-serif text-lg font-semibold text-[var(--color-foreground)]">VisionDream</span>
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              &copy; {new Date().getFullYear()} VisionDream. All rights reserved.
+      <footer className="border-t border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xl font-serif font-bold tracking-wider text-foreground">LXNUYYHYI</span>
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} LXNUYYHYI. All rights reserved.
             </p>
           </div>
         </div>

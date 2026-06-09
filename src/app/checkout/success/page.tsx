@@ -1,151 +1,114 @@
-'use client';
-
 import Link from 'next/link';
-import { Download, CheckCircle, ArrowRight } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
+import DownloadClient from './DownloadClient';
 
-interface OrderInfo {
+export const dynamic = 'force-dynamic';
+
+interface Order {
   id: string;
+  category_name: string;
+  amount_cents: number;
   download_token: string;
-  image: {
-    id: string;
-    title: string;
-    thumbnail_url: string;
-    print_size: string;
-  };
+  download_expires_at: string;
+  download_count: number;
+  max_downloads: number;
+  status: string;
 }
 
-export default function CheckoutSuccessPage() {
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
-  const [order, setOrder] = useState<OrderInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState('');
+export default async function CheckoutSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session_id?: string }>;
+}) {
+  const { session_id } = await searchParams;
 
-  useEffect(() => {
-    if (!sessionId) {
-      setError('Missing session ID');
-      setLoading(false);
-      return;
-    }
+  if (!session_id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-serif font-bold text-foreground mb-4">Invalid Session</h1>
+          <Link href="/" className="text-warm-gold hover:underline">Back to Home</Link>
+        </div>
+      </div>
+    );
+  }
 
-    fetch(`/api/checkout/verify?session_id=${sessionId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
-        } else {
-          setOrder(data);
-        }
-      })
-      .catch(() => setError('Failed to verify payment'))
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+  const client = getSupabaseClient();
+  const { data: order } = await client
+    .from('orders')
+    .select('*')
+    .eq('stripe_session_id', session_id)
+    .maybeSingle();
 
-  const handleDownload = async () => {
-    if (!order) return;
-    setDownloading(true);
+  if (!order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-serif font-bold text-foreground mb-4">Order Not Found</h1>
+          <Link href="/" className="text-warm-gold hover:underline">Back to Home</Link>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      const res = await fetch(`/api/download/${order.download_token}`);
-      const data = await res.json();
-
-      if (data.url) {
-        const response = await fetch(data.url);
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `${order.image.title.replace(/\s+/g, '-').toLowerCase()}.jpg`;
-        link.click();
-        window.URL.revokeObjectURL(blobUrl);
-      } else {
-        alert(data.error || 'Download failed');
-      }
-    } catch {
-      alert('Download failed. Please try again.');
-    } finally {
-      setDownloading(false);
-    }
-  };
+  const ord = order as Order;
+  const isPaid = ord.status === 'paid';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4">
-      <div className="max-w-lg w-full">
-        <div className="bg-white rounded-2xl border border-[var(--color-linen)] p-8 text-center">
-          {loading ? (
-            <div className="py-8">
-              <div className="w-12 h-12 border-4 border-[var(--color-linen)] border-t-[var(--color-warm-gold)] rounded-full animate-spin mx-auto" />
-              <p className="mt-4 text-[var(--color-muted-foreground)]">Verifying your payment...</p>
-            </div>
-          ) : error ? (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        <div className="bg-card border border-border rounded-2xl p-8 text-center">
+          {isPaid ? (
             <>
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-2xl">!</span>
+              <div className="w-16 h-16 rounded-full bg-sage-green/20 flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-sage-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-              <h1 className="mt-4 font-serif text-2xl font-semibold text-[var(--color-foreground)]">
-                Verification Failed
-              </h1>
-              <p className="mt-2 text-[var(--color-muted-foreground)]">{error}</p>
-              <Link
-                href="/"
-                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-foreground)] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity"
-              >
-                Back to Home
-              </Link>
+              <h1 className="text-2xl font-serif font-bold text-foreground mb-2">Payment Successful!</h1>
+              <p className="text-muted-foreground mb-6">
+                Your <strong>{ord.category_name}</strong> collection is ready to download.
+              </p>
+              <div className="bg-secondary rounded-xl p-4 mb-6 text-left">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Collection</span>
+                  <span className="font-medium text-foreground">{ord.category_name}</span>
+                </div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-medium text-foreground">${(ord.amount_cents / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Downloads</span>
+                  <span className="font-medium text-foreground">{ord.download_count} / {ord.max_downloads}</span>
+                </div>
+              </div>
+              <DownloadClient downloadToken={ord.download_token} categoryName={ord.category_name} />
             </>
-          ) : order ? (
+          ) : (
             <>
-              <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle className="w-8 h-8 text-green-500" />
+              <div className="w-16 h-16 rounded-full bg-warm-gold/20 flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-warm-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              <h1 className="mt-4 font-serif text-2xl font-semibold text-[var(--color-foreground)]">
-                Payment Successful!
-              </h1>
-              <p className="mt-2 text-[var(--color-muted-foreground)]">
-                Your vision board image is ready to download.
+              <h1 className="text-2xl font-serif font-bold text-foreground mb-2">Processing Payment</h1>
+              <p className="text-muted-foreground mb-6">
+                Your payment is being processed. Please wait a moment and refresh the page.
               </p>
-
-              {/* Image Preview */}
-              <div className="mt-6 rounded-xl overflow-hidden border border-[var(--color-linen)]">
-                <img
-                  src={order.image.thumbnail_url}
-                  alt={order.image.title}
-                  className="w-full aspect-[4/3] object-cover"
-                />
-              </div>
-              <p className="mt-3 font-serif font-medium text-[var(--color-foreground)]">
-                {order.image.title}
-              </p>
-              <p className="text-sm text-[var(--color-muted-foreground)]">
-                Print size: {order.image.print_size}
-              </p>
-
-              {/* Download Button */}
               <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-4 bg-[var(--color-warm-gold)] text-white rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                onClick={() => window.location.reload()}
+                className="px-6 py-2.5 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity"
               >
-                <Download className="w-5 h-5" />
-                {downloading ? 'Downloading...' : 'Download High-Resolution Image'}
+                Refresh
               </button>
-
-              <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-                Download link expires in 24 hours. Maximum 3 downloads.
-              </p>
-
-              <Link
-                href="/"
-                className="mt-6 inline-flex items-center gap-1 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors"
-              >
-                <ArrowRight className="w-4 h-4" />
-                Continue Browsing
-              </Link>
             </>
-          ) : null}
+          )}
+        </div>
+        <div className="text-center mt-6">
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Continue Browsing
+          </Link>
         </div>
       </div>
     </div>

@@ -3,11 +3,11 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'VisionDream - Beautiful Vision Board Printables',
-    template: '%s | VisionDream',
+    default: 'LXNUYYHYI - Beautiful Vision Board Printables',
+    template: '%s | LXNUYYHYI',
   },
   description:
-    'Download beautiful, high-quality vision board images to manifest your dreams. Print-ready art for Health, Wealth, Love, Career, Travel & Personal Growth.',
+    'Download beautiful, high-quality vision board image packs to manifest your dreams. Print-ready art for Wealth, Travel, Fitness, Career, Self-Love, Family, Home & Spiritual growth.',
   keywords: [
     'vision board',
     'vision board printables',
@@ -17,11 +17,12 @@ export const metadata: Metadata = {
     'vision board images',
     'printable art',
     'motivational art',
+    'LXNUYYHYI',
   ],
   openGraph: {
-    title: 'VisionDream - Beautiful Vision Board Printables',
+    title: 'LXNUYYHYI - Beautiful Vision Board Printables',
     description:
-      'Download beautiful, high-quality vision board images to manifest your dreams.',
+      'Download beautiful, high-quality vision board image packs to manifest your dreams.',
     type: 'website',
     locale: 'en_US',
   },

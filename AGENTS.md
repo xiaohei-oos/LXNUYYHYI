@@ -2,7 +2,12 @@
 
 ## 项目概览
 
-VisionDream - 愿景板图片付费下载平台。面向美国用户，提供高质量的愿景板图片素材，支持按类别浏览、Stripe 支付和高清图片下载打印。
+LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分类包售卖愿景板高清图片素材，支持 Stripe 支付和 ZIP 压缩包下载。
+
+### 商业模式
+
+- **售卖单元**：分类图片包（非单张图片）
+- 用户浏览 8 大分类 → 预览缩略图 → 支付固定金额 → 下载整个分类的 ZIP 压缩包
 
 ### 版本技术栈
 
@@ -20,24 +25,24 @@ VisionDream - 愿景板图片付费下载平台。面向美国用户，提供高
 
 ```
 ├── scripts/
-│   └── seed.ts                # 数据库种子脚本（分类+图片）
+│   └── seed.ts                # 数据库种子脚本（8分类+24图片）
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx           # 首页（Hero + 分类 + 精选）
-│   │   ├── layout.tsx         # 根布局
+│   │   ├── page.tsx           # 首页（Hero + 8分类商品卡片）
+│   │   ├── layout.tsx         # 根布局（LXNUYYHYI品牌）
 │   │   ├── globals.css        # 全局样式（含 Design Tokens）
-│   │   ├── category/[slug]/   # 分类详情页
-│   │   ├── image/[id]/        # 图片预览页
-│   │   │   └── ImagePreviewClient.tsx  # 客户端购买组件
+│   │   ├── category/[slug]/   # 分类详情页（预览+整包购买）
 │   │   ├── checkout/
 │   │   │   ├── success/       # 支付成功页（含下载）
 │   │   │   └── cancel/        # 支付取消页
+│   │   ├── admin/             # 全中文后台管理面板
 │   │   └── api/
 │   │       ├── categories/    # 分类列表 API
-│   │       ├── images/        # 图片列表/详情 API
+│   │       ├── images/        # 图片列表 API
 │   │       ├── checkout/      # 支付创建/验证 API
 │   │       ├── stripe/webhook # Stripe Webhook
-│   │       └── download/[token] # 安全下载 API
+│   │       ├── download/[token] # 安全下载 API
+│   │       └── admin/         # 后台管理 API
 │   ├── storage/database/
 │   │   ├── supabase-client.ts # Supabase 客户端
 │   │   └── shared/schema.ts   # Drizzle 数据库 Schema
@@ -52,22 +57,41 @@ VisionDream - 愿景板图片付费下载平台。面向美国用户，提供高
 
 ## 核心数据模型
 
-- **categories**: 分类表（6 个分类：Health, Wealth, Love, Career, Travel, Growth）
-- **vision_images**: 图片表（缩略图URL公开，高清图Key私有，需签名URL下载）
-- **orders**: 订单表（Stripe Session 关联，download_token 一次性下载令牌，24h 过期，最多 3 次下载）
+- **categories**: 分类表（= 商品，8 个分类，含价格、ZIP文件Key、中英文名称）
+- **vision_images**: 图片表（属于分类，缩略图URL公开，高清图Key私有）
+- **orders**: 订单表（关联分类包，Stripe Session，download_token 一次性下载令牌，24h 过期，最多 3 次下载）
+
+## 中英文分类映射
+
+| 英文（前台） | 中文（后台） | slug |
+|-------------|------------|------|
+| Wealth & Finance | 财富与财务 | wealth-finance |
+| Travel & Adventure | 旅行与探索 | travel-adventure |
+| Health & Fitness | 健康与健身 | health-fitness |
+| Career & Business | 职业与事业 | career-business |
+| Self-Love & Personal Growth | 自爱与成长 | self-love-growth |
+| Family & Relationship | 家庭与关系 | family-relationship |
+| Home & Living | 居家生活 | home-living |
+| Spiritual & Manifestation | 灵性与显化 | spiritual-manifestation |
 
 ## 核心业务流程
 
-1. 浏览 → 分类/首页查看图片
-2. 预览 → 点击图片进入预览页（低清+水印）
-3. 购买 → 点击 Buy & Download → Stripe Checkout
-4. 下载 → 支付成功 → 签名 URL 下载高清图
+1. 浏览 → 首页查看 8 大分类商品卡片
+2. 预览 → 点击分类 → 查看该分类下图片缩略图
+3. 购买 → 点击 Buy Now → Stripe Checkout
+4. 下载 → 支付成功 → 签名 URL 下载分类 ZIP 包
+
+## 后台管理
+
+- 访问路径：`/admin`
+- 全中文界面
+- 功能：仪表盘、图片管理、图片上传（直传S3）、分类管理（改价格）、订单管理
 
 ## 开发规范
 
 - TypeScript strict 模式，禁止隐式 any
 - 字段名使用 snake_case（Supabase 规范）
 - 每次数据库操作必须检查 error 并 throw
-- 图片下载必须使用 fetch + blob 模式（跨域安全）
-- 签名 URL 不持久化，按需生成
+- 下载必须使用签名 URL 重定向，不经过 Vercel 传输大文件
 - 高清图 key 存数据库，URL 动态生成
+- 后台 API 路径统一为 `/api/admin/*`

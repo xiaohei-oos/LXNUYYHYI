@@ -1,8 +1,13 @@
 # DESIGN.md
 
+## 品牌
+
+- 品牌名：LXNUYYHYI（美国注册商标）
+- 定位：愿景板图片包付费下载商城
+
 ## 气质与意象
 
-"清晨阳光洒在桌面的灵感板上" — 温暖、宁静、充满可能性。不是冷冰冰的图库网站，而是一间精心策展的灵感画廊，每张图都在低声诉说梦想。
+"清晨阳光洒在桌面的灵感板上" — 温暖、宁静、充满可能性。不是冷冰冰的图库网站，而是一间精心策展的灵感画廊，每个分类包都在低声诉说梦想。
 
 ## 配色方案
 
@@ -26,18 +31,31 @@
 
 - 图片风格：愿景板美学 — 柔光、自然纹理、温暖色调、梦想氛围
 - 图形语言：大圆角卡片（rounded-2xl）、柔和阴影、呼吸间距
-- 水印：预览图加半透明对角 "SAMPLE" 水印
+- 售卖模式：按分类包售卖，展示缩略图预览 + 整包购买
 
 ## 页面结构
 
-- 首页：全幅 Hero → 分类卡片（3列网格）→ 精选图片（瀑布流）
-- 分类页：顶部面包屑 → 筛选栏 → 图片网格（2-4列响应式）
-- 预览页：左侧大图预览 → 右侧信息面板（标题、描述、价格、购买按钮）
+- 首页：全幅 Hero → 8 分类商品卡片（4列网格）→ 信任标识
+- 分类详情页：面包屑 → 缩略图预览网格 → 包含内容说明 → 整包购买按钮
 - 支付成功页：居中卡片式布局 → 下载按钮醒目
+- 后台管理：全中文界面 → 仪表盘/图片上传/分类管理/订单管理
+
+## 8 大导航分类
+
+| 导航名 | 英文全名 | 中文名 | slug |
+|--------|---------|--------|------|
+| Wealth | Wealth & Finance | 财富与财务 | wealth-finance |
+| Travel | Travel & Adventure | 旅行与探索 | travel-adventure |
+| Fitness | Health & Fitness | 健康与健身 | health-fitness |
+| Career | Career & Business | 职业与事业 | career-business |
+| Self-Love | Self-Love & Personal Growth | 自爱与成长 | self-love-growth |
+| Family | Family & Relationship | 家庭与关系 | family-relationship |
+| Home | Home & Living | 居家生活 | home-living |
+| Spiritual | Spiritual & Manifestation | 灵性与显化 | spiritual-manifestation |
 
 ## 动效与交互
 
-- 图片卡片：hover 时轻微上浮 + 阴影加深（translate-y -2px, shadow-lg）
+- 分类卡片：hover 时轻微上浮 + 阴影加深（translate-y -2px, shadow-lg）
 - 页面过渡：淡入（fade-in），不用弹跳或滑动
 - 按钮：hover 时背景色加深 10%，点击时 scale(0.98)
 - 图片加载：skeleton 占位 → 淡入显示

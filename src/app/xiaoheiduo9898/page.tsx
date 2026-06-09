@@ -39,6 +39,12 @@ interface VisionImage {
 type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders';
 
 export default function AdminPage() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [tab, setTab] = useState<Tab>('dashboard');
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -46,14 +52,53 @@ export default function AdminPage() {
   const [stats, setStats] = useState({ totalImages: 0, totalOrders: 0, totalRevenue: 0, paidOrders: 0 });
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    fetch('/api/xiaoheiduo9898/stats', { method: 'GET' }).then(res => {
+      setAuthenticated(res.ok);
+      setAuthChecking(false);
+    }).catch(() => {
+      setAuthenticated(false);
+      setAuthChecking(false);
+    });
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError('');
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginUser, password: loginPass }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAuthenticated(true);
+      } else {
+        setLoginError(data.error || '登录失败');
+      }
+    } catch {
+      setLoginError('网络错误，请重试');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/xiaoheiduo9898/login', { method: 'DELETE' });
+    setAuthenticated(false);
+  };
+
+  // All hooks must be called before any conditional returns
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [catRes, orderRes, imgRes, statsRes] = await Promise.all([
-        fetch('/api/admin/categories'),
-        fetch('/api/admin/orders'),
-        fetch('/api/admin/images?limit=50'),
-        fetch('/api/admin/stats'),
+        fetch('/api/xiaoheiduo9898/categories'),
+        fetch('/api/xiaoheiduo9898/orders'),
+        fetch('/api/xiaoheiduo9898/images?limit=50'),
+        fetch('/api/xiaoheiduo9898/stats'),
       ]);
       if (catRes.ok) setCategories((await catRes.json()).categories);
       if (orderRes.ok) setOrders((await orderRes.json()).orders);
@@ -66,7 +111,7 @@ export default function AdminPage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (authenticated) fetchData(); }, [authenticated, fetchData]);
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'dashboard', label: '仪表盘', icon: '📊' },
@@ -75,6 +120,59 @@ export default function AdminPage() {
     { key: 'categories', label: '分类管理', icon: '📁' },
     { key: 'orders', label: '订单管理', icon: '📦' },
   ];
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8]">
+        <div className="text-[#1A1A1A] text-lg">验证中...</div>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8]">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+          <h1 className="text-2xl font-bold text-[#1A1A1A] mb-2 text-center">LXNUYYHYI 后台管理</h1>
+          <p className="text-gray-500 text-center mb-6">请输入账号密码登录</p>
+          {loginError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">{loginError}</div>
+          )}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+              <input
+                type="text"
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
+                className="w-full px-4 py-2 border border-[#E8E6E1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8956C] bg-white"
+                placeholder="请输入用户名"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+              <input
+                type="password"
+                value={loginPass}
+                onChange={(e) => setLoginPass(e.target.value)}
+                className="w-full px-4 py-2 border border-[#E8E6E1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8956C] bg-white"
+                placeholder="请输入密码"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="w-full py-2.5 bg-[#1A1A1A] text-white rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50"
+            >
+              {loginLoading ? '登录中...' : '登录'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -86,6 +184,7 @@ export default function AdminPage() {
               <span className="text-2xl font-bold text-gray-900 tracking-wider">LXNUYYHYI</span>
               <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">管理后台</span>
             </div>
+            <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-600 transition-colors">退出登录</button>
           </div>
         </div>
       </header>
@@ -196,7 +295,7 @@ function ImagesTab({ images, categories, onRefresh }: { images: VisionImage[]; c
 
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除这张图片吗？')) return;
-    const res = await fetch(`/api/admin/images?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/xiaoheiduo9898/images?id=${id}`, { method: 'DELETE' });
     if (res.ok) onRefresh();
     else alert('删除失败');
   };
@@ -276,7 +375,7 @@ function UploadTab({ categories, onRefresh }: { categories: Category[]; onRefres
 
         setProgress(prev => prev.map((p, idx) => idx === i ? { ...p, percent: 30 } : p));
 
-        const res = await fetch('/api/admin/images/upload', {
+        const res = await fetch('/api/xiaoheiduo9898/images/upload', {
           method: 'POST',
           body: formData,
         });
@@ -382,7 +481,7 @@ function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRe
       alert('请输入有效价格');
       return;
     }
-    const res = await fetch('/api/admin/categories', {
+    const res = await fetch('/api/xiaoheiduo9898/categories', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, price_cents: Math.round(priceDollars * 100) }),

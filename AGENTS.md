@@ -35,7 +35,7 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 │   │   ├── checkout/
 │   │   │   ├── success/       # 支付成功页（含下载）
 │   │   │   └── cancel/        # 支付取消页
-│   │   ├── admin/             # 全中文后台管理面板
+│   │   ├── xiaoheiduo9898/    # 全中文后台管理面板（需登录验证）
 │   │   └── api/
 │   │       ├── categories/    # 分类列表 API
 │   │       ├── images/        # 图片列表 API
@@ -83,7 +83,8 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 
 ## 后台管理
 
-- 访问路径：`/admin`
+- 访问路径：`/xiaoheiduo9898`
+- 登录验证：用户名 `xysales`，密码环境变量 `ADMIN_PASSWORD`
 - 全中文界面
 - 功能：仪表盘、图片管理、图片上传（直传S3）、分类管理（改价格）、订单管理
 
@@ -94,4 +95,4 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 - 每次数据库操作必须检查 error 并 throw
 - 下载必须使用签名 URL 重定向，不经过 Vercel 传输大文件
 - 高清图 key 存数据库，URL 动态生成
-- 后台 API 路径统一为 `/api/admin/*`
+- 后台 API 路径统一为 `/api/xiaoheiduo9898/*`

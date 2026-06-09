@@ -127,8 +127,11 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
-            <span className="text-3xl font-bold text-warm-gold">${(cat.price_cents / 100).toFixed(2)}<span className="text-base font-normal text-muted-foreground"> / {cat.image_count} images</span></span>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div>
+              <span className="text-3xl font-bold text-warm-gold">${(cat.price_cents / 100).toFixed(2)}</span>
+              <p className="text-sm text-muted-foreground mt-0.5 text-right">{cat.image_count} images included</p>
+            </div>
             <CategoryBuyClient categoryId={cat.id} categoryName={cat.name} priceCents={cat.price_cents} />
           </div>
         </div>

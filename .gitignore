@@ -3,6 +3,11 @@ dist
 .DS_Store
 *.swp
 .git/*
+
+# Upload tool
+tools/upload/node_modules/
+tools/upload/temp/
+tools/upload/.env
 __pycache__/
 *.pyc
 .venv/*

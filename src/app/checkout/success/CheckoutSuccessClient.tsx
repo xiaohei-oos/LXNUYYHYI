@@ -96,28 +96,17 @@ export default function CheckoutSuccessClient({ searchParams }: { searchParams: 
     if (!order) return;
     setDownloading(true);
     try {
-      const res = await fetch(`/api/download/${order.download_token}`);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Download failed');
-      }
-      const data = await res.json();
-      if (data.downloadUrl) {
-        // Use fetch + blob to handle cross-origin download
-        const fileRes = await fetch(data.downloadUrl);
-        const blob = await fileRes.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `${data.categoryName || 'vision-board'}.zip`;
-        link.click();
-        window.URL.revokeObjectURL(blobUrl);
-      } else {
-        throw new Error('No download URL returned');
-      }
+      // Use hidden link to trigger download — the API will 302 redirect to signed URL
+      const link = document.createElement('a');
+      link.href = `/api/download/${order.download_token}`;
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // Give browser time to start the download, then reset button
+      setTimeout(() => setDownloading(false), 3000);
     } catch {
       setError('Download failed. Please try again.');
-    } finally {
       setDownloading(false);
     }
   };

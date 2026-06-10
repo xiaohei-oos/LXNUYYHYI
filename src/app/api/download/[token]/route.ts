@@ -6,6 +6,8 @@ import {
   resolveImageUrl,
 } from '@/storage/oss-client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -78,7 +80,8 @@ export async function GET(
       })
       .eq('id', order.id);
 
-    return NextResponse.json({ downloadUrl, categoryName: category.name, slug: category.slug });
+    // Redirect directly to the signed URL — avoids CORS issues with fetch+blob
+    return NextResponse.redirect(downloadUrl);
   } catch (err) {
     console.error('Download error:', err);
     return NextResponse.json(

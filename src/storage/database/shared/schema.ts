@@ -48,7 +48,7 @@ export const orders = pgTable(
 	"orders",
 	{
 		id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-		email: varchar("email", { length: 255 }).notNull(),
+		email: varchar("email", { length: 255 }),
 		category_id: varchar("category_id", { length: 36 }).notNull().references(() => categories.id),
 		category_name: varchar("category_name", { length: 100 }).notNull(),
 		amount_cents: integer("amount_cents").notNull(),

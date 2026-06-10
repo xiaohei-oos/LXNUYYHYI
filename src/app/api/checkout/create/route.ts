@@ -1,11 +1,37 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-  // @ts-expect-error Stripe API version
-  apiVersion: '2025-04-30.basil',
-});
+// PayPal API base URL
+const PAYPAL_BASE = process.env.PAYPAL_MODE === 'live'
+  ? 'https://api-m.paypal.com'
+  : 'https://api-m.sandbox.paypal.com';
+
+async function getPayPalAccessToken(): Promise<string> {
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('PayPal credentials not configured');
+  }
+
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`PayPal auth failed: ${err}`);
+  }
+
+  const data = await res.json();
+  return data.access_token;
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +45,7 @@ export async function POST(request: Request) {
     const client = getSupabaseClient();
     const { data: category, error: catError } = await client
       .from('categories')
-      .select('id, name, price_cents')
+      .select('id, name, price_cents, slug')
       .eq('id', categoryId)
       .maybeSingle();
 
@@ -29,49 +55,76 @@ export async function POST(request: Request) {
 
     // Use price from database (prevent price tampering)
     const actualPrice = category.price_cents;
+    const priceUSD = (actualPrice / 100).toFixed(2);
 
-    // Create Stripe Checkout Session
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
+    // Get PayPal access token
+    const accessToken = await getPayPalAccessToken();
+
+    // Create PayPal order
+    const siteUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
     const baseUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `${category.name} - Vision Board Pack`,
-              description: `Complete collection of ${categoryName} vision board images. Instant download ZIP.`,
-            },
-            unit_amount: actualPrice,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/checkout/cancel`,
-      metadata: {
-        categoryId,
-        categoryName,
+    const orderRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [
+          {
+            description: `${category.name} - Vision Board Pack (Instant Download)`,
+            custom_id: categoryId,
+            amount: {
+              currency_code: 'USD',
+              value: priceUSD,
+            },
+          },
+        ],
+        application_context: {
+          brand_name: 'LXNUYYHYI',
+          landing_page: 'NO_PREFERENCE',
+          user_action: 'PAY_NOW',
+          return_url: `${baseUrl}/checkout/success`,
+          cancel_url: `${baseUrl}/checkout/cancel`,
+        },
+      }),
     });
+
+    if (!orderRes.ok) {
+      const err = await orderRes.text();
+      console.error('PayPal create order error:', err);
+      return NextResponse.json({ error: 'Failed to create PayPal order' }, { status: 500 });
+    }
+
+    const orderData = await orderRes.json();
+    const paypalOrderId = orderData.id;
+
+    // Find the approval URL from links
+    const approvalLink = orderData.links?.find((l: { rel: string; href: string }) => l.rel === 'approve');
+    const approvalUrl = approvalLink?.href;
+
+    if (!approvalUrl) {
+      console.error('No approval link found in PayPal response:', JSON.stringify(orderData));
+      return NextResponse.json({ error: 'Failed to get PayPal approval URL' }, { status: 500 });
+    }
 
     // Create pending order in database
     const { error: orderError } = await client.from('orders').insert({
       category_id: categoryId,
       category_name: category.name,
       amount_cents: actualPrice,
-      stripe_session_id: session.id,
+      stripe_session_id: paypalOrderId, // Reuse field for PayPal order ID
       status: 'pending',
     });
 
     if (orderError) {
       console.error('Failed to create order:', orderError);
+      // Don't fail the request, the PayPal order is already created
     }
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: approvalUrl });
   } catch (err) {
     console.error('Checkout error:', err);
     return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });

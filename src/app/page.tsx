@@ -208,17 +208,17 @@ export default async function HomePage() {
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">1</div>
               <h3 className="font-semibold text-foreground mb-2">Choose a Collection</h3>
-              <p className="text-sm text-muted-foreground">Browse our curated vision board packs by theme.</p>
+              <p className="text-sm text-muted-foreground">Browse our curated vision board packs by theme — from wealth and travel to health and spirituality.</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">2</div>
               <h3 className="font-semibold text-foreground mb-2">Secure Checkout</h3>
-              <p className="text-sm text-muted-foreground">Secure checkout with Stripe. All major cards, Apple Pay & Google Pay accepted.</p>
+              <p className="text-sm text-muted-foreground">Pay securely with PayPal or credit card. No account required for card payments.</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-warm-gold/20 text-warm-gold flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif">3</div>
               <h3 className="font-semibold text-foreground mb-2">Download & Print</h3>
-              <p className="text-sm text-muted-foreground">Download the ZIP file and print your vision board art.</p>
+              <p className="text-sm text-muted-foreground">Each ZIP includes individual high-res images plus ready-to-print A4 layouts. Just download, print at home, and start manifesting.</p>
             </div>
           </div>
         </div>

@@ -350,7 +350,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           <div>
             <h2 className="text-xl font-semibold text-foreground">Full Collection Bundle</h2>
             <p className="mt-2 text-muted-foreground text-sm">
-              {cat.image_count} hi-res images &middot; 300dpi print-ready &middot; Instant ZIP download
+              {cat.image_count} A4 print-ready vision board pages &middot; Individual images also included &middot; Instant ZIP download
             </p>
             <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
@@ -376,7 +376,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           <div className="flex flex-col items-end gap-2 shrink-0">
             <div>
               <span className="text-3xl font-bold text-warm-gold">${(cat.price_cents / 100).toFixed(2)}</span>
-              <p className="text-sm text-muted-foreground mt-0.5 text-right">{cat.image_count} images included</p>
+              <p className="text-sm text-muted-foreground mt-0.5 text-right">{cat.image_count} A4 print-ready pages</p>
             </div>
             <CategoryBuyClient categoryId={cat.id} categoryName={cat.name} priceCents={cat.price_cents} />
           </div>

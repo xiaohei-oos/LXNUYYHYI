@@ -53,7 +53,7 @@ export default function AdminPage() {
   const [imagesHasMore, setImagesHasMore] = useState(false);
   const [imagesTotal, setImagesTotal] = useState(0);
   const IMAGES_PAGE_SIZE = 100;
-  const [stats, setStats] = useState({ totalImages: 0, totalOrders: 0, totalRevenue: 0, paidOrders: 0 });
+  const [stats, setStats] = useState({ totalImages: 0, totalOrders: 0, totalRevenue: 0, paidOrders: 0, unpaidOrders: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -288,14 +288,15 @@ export default function AdminPage() {
   );
 }
 
-function DashboardTab({ stats, categories }: { stats: { totalImages: number; totalOrders: number; totalRevenue: number; paidOrders: number }; categories: Category[] }) {
+function DashboardTab({ stats, categories }: { stats: { totalImages: number; totalOrders: number; totalRevenue: number; paidOrders: number; unpaidOrders: number }; categories: Category[] }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-6">数据概览</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard label="图片总数" value={stats.totalImages} icon="🖼️" />
         <StatCard label="分类数" value={categories.length} icon="📁" />
-        <StatCard label="订单总数" value={stats.totalOrders} icon="📦" />
+        <StatCard label="已支付订单" value={stats.paidOrders} icon="✅" />
+        <StatCard label="未支付订单" value={stats.unpaidOrders} icon="⏳" />
         <StatCard label="总收入" value={`$${(stats.totalRevenue / 100).toFixed(2)}`} icon="💰" />
       </div>
       <h3 className="text-lg font-bold text-gray-900 mb-4">各分类概览</h3>

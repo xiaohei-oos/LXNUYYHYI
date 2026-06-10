@@ -23,23 +23,50 @@ export default function CheckoutSuccessClient({ searchParams }: { searchParams: 
   useEffect(() => {
     const init = async () => {
       try {
-        // Await searchParams (Next.js 15+ async)
-        const params = await searchParams;
+        // Get token from ALL possible sources
+        let token: string | null = null;
 
-        // PayPal returns ?token=ORDER_ID, also try PayerID param
-        // Fallback: check window.location.search directly
-        let token = typeof params.token === 'string' ? params.token : null;
+        // 1. Try searchParams (Next.js server-side)
+        try {
+          const params = await searchParams;
+          token = typeof params.token === 'string' ? params.token : null;
+          console.log('[CheckoutSuccess] searchParams:', JSON.stringify(params));
+        } catch (e) {
+          console.log('[CheckoutSuccess] searchParams error:', e);
+        }
 
-        // If searchParams didn't have token, try parsing URL directly
+        // 2. Try window.location.search (client-side)
         if (!token && typeof window !== 'undefined') {
           const urlParams = new URLSearchParams(window.location.search);
           token = urlParams.get('token');
+          console.log('[CheckoutSuccess] URL search:', window.location.search);
         }
 
-        console.log('[CheckoutSuccess] token:', token, 'params:', JSON.stringify(params));
+        // 3. Try window.location.hash (PayPal sometimes puts params in hash)
+        if (!token && typeof window !== 'undefined') {
+          const hash = window.location.hash;
+          if (hash) {
+            const hashParams = new URLSearchParams(hash.substring(1));
+            token = hashParams.get('token');
+            console.log('[CheckoutSuccess] URL hash:', hash);
+          }
+        }
+
+        // 4. Check full URL for token pattern (catch-all)
+        if (!token && typeof window !== 'undefined') {
+          const fullUrl = window.location.href;
+          const tokenMatch = fullUrl.match(/[?&]token=([^&]+)/);
+          if (tokenMatch) {
+            token = tokenMatch[1];
+            console.log('[CheckoutSuccess] Regex match token:', token);
+          }
+        }
+
+        console.log('[CheckoutSuccess] Final token:', token);
+        console.log('[CheckoutSuccess] Full URL:', typeof window !== 'undefined' ? window.location.href : 'N/A');
 
         if (!token) {
-          setError('No payment token found. If you completed payment, please check your email or contact support.');
+          setError('Missing token');
           setLoading(false);
           return;
         }
@@ -48,14 +75,15 @@ export default function CheckoutSuccessClient({ searchParams }: { searchParams: 
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || 'Payment verification failed');
+          setError(data.error || 'Payment capture failed');
+          setLoading(false);
           return;
         }
 
         setOrder(data.order);
       } catch (err) {
+        setError('An unexpected error occurred');
         console.error('[CheckoutSuccess] Error:', err);
-        setError('Failed to verify payment. Please refresh the page.');
       } finally {
         setLoading(false);
       }
@@ -65,24 +93,17 @@ export default function CheckoutSuccessClient({ searchParams }: { searchParams: 
   }, [searchParams]);
 
   const handleDownload = async () => {
-    if (!order?.download_token) return;
+    if (!order) return;
     setDownloading(true);
     try {
       const res = await fetch(`/api/download/${order.download_token}`);
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || 'Download failed');
-        return;
+      if (!res.ok) throw new Error('Download failed');
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
       }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${order.category_name.replace(/\s+/g, '-').toLowerCase()}-vision-board-pack.zip`;
-      link.click();
-      window.URL.revokeObjectURL(url);
     } catch {
-      alert('Download failed. Please try again.');
+      setError('Download failed. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -90,17 +111,15 @@ export default function CheckoutSuccessClient({ searchParams }: { searchParams: 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white border border-[#E8E6E1] rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-[#C8956C]/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
-              <svg className="w-8 h-8 text-[#C8956C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">Confirming Payment...</h1>
-            <p className="text-[#6B6B6B]">Please wait while we verify your PayPal payment.</p>
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full bg-[#C8956C]/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <svg className="w-8 h-8 text-[#C8956C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
+          <p className="text-[#6B6B6B] text-lg">Confirming Payment...</p>
+          <p className="text-[#999] text-sm mt-2">Please wait while we verify your payment</p>
         </div>
       </div>
     );
@@ -108,73 +127,49 @@ export default function CheckoutSuccessClient({ searchParams }: { searchParams: 
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white border border-[#E8E6E1] rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">Payment Error</h1>
-            <p className="text-[#6B6B6B] mb-6">{error}</p>
-            <Link
-              href="/"
-              className="inline-flex items-center px-6 py-3 bg-[#1A1A1A] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
-            >
-              Back to Home
-            </Link>
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full mx-4 text-center border border-[#E8E6E1]">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
           </div>
+          <h1 className="text-2xl font-bold text-[#1A1A1A] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>Payment Error</h1>
+          <p className="text-[#6B6B6B] mb-6">{error}</p>
+          <Link href="/" className="inline-block bg-[#1A1A1A] text-white px-6 py-3 rounded-xl hover:bg-[#333] transition-colors">
+            Back to Home
+          </Link>
         </div>
       </div>
     );
   }
 
-  if (!order) return null;
-
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white border border-[#E8E6E1] rounded-2xl p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#A8B5A0]/20 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-[#A8B5A0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">Order Confirmed!</h1>
-          <p className="text-[#6B6B6B] mb-6">
-            Your <strong>{order.category_name}</strong> collection is ready for download.
-          </p>
-          <div className="bg-[#F5F5F0] rounded-xl p-4 mb-6 text-left">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-[#6B6B6B]">Pack</span>
-              <span className="font-medium text-[#1A1A1A]">{order.category_name}</span>
-            </div>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-[#6B6B6B]">Amount</span>
-              <span className="font-medium text-[#1A1A1A]">${(order.amount_cents / 100).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#6B6B6B]">Downloads</span>
-              <span className="font-medium text-[#1A1A1A]">{order.download_count} / {order.max_downloads}</span>
-            </div>
-          </div>
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="w-full px-6 py-3 bg-[#1A1A1A] text-white rounded-full font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            {downloading ? 'Preparing Download...' : 'Download ZIP Pack'}
-          </button>
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
+      <div className="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full mx-4 text-center border border-[#E8E6E1]">
+        <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
         </div>
-        <div className="text-center mt-6">
-          <Link href="/" className="text-sm text-[#6B6B6B] hover:text-[#1A1A1A] transition-colors">
-            Continue Browsing
-          </Link>
-        </div>
+        <h1 className="text-2xl font-bold text-[#1A1A1A] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>Payment Successful!</h1>
+        {order && (
+          <>
+            <p className="text-[#6B6B6B] mb-1">{order.category_name}</p>
+            <p className="text-[#C8956C] font-semibold text-lg mb-6">${(order.amount_cents / 100).toFixed(2)}</p>
+          </>
+        )}
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="w-full bg-[#1A1A1A] text-white px-6 py-3 rounded-xl hover:bg-[#333] transition-colors disabled:opacity-50 mb-4 text-lg font-medium"
+        >
+          {downloading ? 'Preparing Download...' : 'Download ZIP Package'}
+        </button>
+        <p className="text-sm text-[#999]">
+          Download link expires in 24 hours
+          {order && ` • ${order.max_downloads - order.download_count} downloads remaining`}
+        </p>
       </div>
     </div>
   );

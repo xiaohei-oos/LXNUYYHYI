@@ -53,16 +53,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
-    // Use price from database (prevent price tampering)
+    // Verify price
     const actualPrice = category.price_cents;
+    if (priceCents !== actualPrice) {
+      return NextResponse.json({ error: 'Price mismatch' }, { status: 400 });
+    }
+
     const priceUSD = (actualPrice / 100).toFixed(2);
 
     // Get PayPal access token
     const accessToken = await getPayPalAccessToken();
 
-    // Create PayPal order
-    const siteUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
-    const baseUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+    // Get base URL - prefer env var, fallback to request origin
+    const siteUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || '';
+    const baseUrl = siteUrl.startsWith('http') ? siteUrl : (siteUrl ? `https://${siteUrl}` : '');
+    const finalBaseUrl = baseUrl || new URL(request.url).origin;
 
     const orderRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
       method: 'POST',
@@ -86,8 +91,8 @@ export async function POST(request: Request) {
           brand_name: 'LXNUYYHYI',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
-          return_url: `${baseUrl}/checkout/success`,
-          cancel_url: `${baseUrl}/checkout/cancel`,
+          return_url: `${finalBaseUrl}/checkout/success`,
+          cancel_url: `${finalBaseUrl}/checkout/cancel`,
         },
       }),
     });

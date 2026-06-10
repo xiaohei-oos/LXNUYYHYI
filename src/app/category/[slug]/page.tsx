@@ -171,10 +171,21 @@ interface Category {
   name_cn: string;
   slug: string;
   description: string;
-  cover_image: string;
   image_count: number;
   price_cents: number;
 }
+
+// Static banner images stored locally - never change
+const CATEGORY_BANNER_IMAGES: Record<string, string> = {
+  'wealth-finance': '/images/categories/banner-wealth-finance.jpg',
+  'travel-adventure': '/images/categories/banner-travel-adventure.jpg',
+  'health-fitness': '/images/categories/banner-health-fitness.jpg',
+  'career-business': '/images/categories/banner-career-business.jpg',
+  'self-love-growth': '/images/categories/banner-self-love-growth.jpg',
+  'family-relationship': '/images/categories/banner-family-relationship.jpg',
+  'home-living': '/images/categories/banner-home-living.jpg',
+  'spiritual-manifestation': '/images/categories/banner-spiritual-manifestation.jpg',
+};
 
 interface VisionImage {
   id: string;
@@ -216,8 +227,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   const imgs = (images || []) as VisionImage[];
 
-  // Resolve cover image URL (OSS key → signed URL)
-  const resolvedCoverImage = await resolveImageUrl(cat.cover_image, 86400);
+  const bannerImage = CATEGORY_BANNER_IMAGES[slug] || '/images/categories/banner-wealth-finance.jpg';
 
   // Resolve thumbnail URLs for first page only
   const imgsWithResolvedUrls = await Promise.all(
@@ -318,7 +328,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="relative rounded-2xl overflow-hidden aspect-[21/9]">
           <img
-            src={resolvedCoverImage}
+            src={bannerImage}
             alt={`${cat.name} vision board images - high-resolution print-ready collection by LXNUYYHYI`}
             className="w-full h-full object-cover"
             width={1200}

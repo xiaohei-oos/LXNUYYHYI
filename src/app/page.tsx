@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { resolveImageUrl } from '@/storage/oss-client';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -44,11 +44,22 @@ interface Category {
   name_cn: string;
   slug: string;
   description: string;
-  cover_image: string;
   image_count: number;
   price_cents: number;
   sort_order: number;
 }
+
+// Static cover images stored locally - never change
+const CATEGORY_COVER_IMAGES: Record<string, string> = {
+  'wealth-finance': '/images/categories/cover-wealth-finance.jpg',
+  'travel-adventure': '/images/categories/cover-travel-adventure.jpg',
+  'health-fitness': '/images/categories/cover-health-fitness.jpg',
+  'career-business': '/images/categories/cover-career-business.jpg',
+  'self-love-growth': '/images/categories/cover-self-love-growth.jpg',
+  'family-relationship': '/images/categories/cover-family-relationship.jpg',
+  'home-living': '/images/categories/cover-home-living.jpg',
+  'spiritual-manifestation': '/images/categories/cover-spiritual-manifestation.jpg',
+};
 
 export default async function HomePage() {
   const client = getSupabaseClient();
@@ -58,14 +69,6 @@ export default async function HomePage() {
     .order('sort_order', { ascending: true });
 
   const cats = (categories || []) as Category[];
-
-  // Resolve cover image URLs (OSS keys → signed URLs, local paths → keep as-is)
-  const catsWithResolvedImages = await Promise.all(
-    cats.map(async (cat) => ({
-      ...cat,
-      cover_image: await resolveImageUrl(cat.cover_image, 86400),
-    }))
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,7 +82,7 @@ export default async function HomePage() {
               </span>
             </Link>
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-              {catsWithResolvedImages.map((cat) => (
+              {cats.map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/category/${cat.slug}`}
@@ -169,7 +172,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {catsWithResolvedImages.map((cat) => (
+          {cats.map((cat) => (
             <Link
               key={cat.id}
               href={`/category/${cat.slug}`}
@@ -177,7 +180,7 @@ export default async function HomePage() {
             >
               <div className="aspect-[4/3] relative overflow-hidden">
                 <img
-                  src={cat.cover_image}
+                  src={CATEGORY_COVER_IMAGES[cat.slug] || '/images/categories/cover-wealth-finance.jpg'}
                   alt={`${cat.name} vision board images - curated collection for manifestation and goal setting`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />

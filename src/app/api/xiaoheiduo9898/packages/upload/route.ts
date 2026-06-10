@@ -8,6 +8,72 @@ import { requireAdmin } from '../../_auth';
  * POST /api/xiaoheiduo9898/packages/upload
  * FormData: file (ZIP), categoryId
  */
+/**
+ * Delete ZIP package for a category
+ * DELETE /api/xiaoheiduo9898/packages/upload?categoryId=xxx
+ */
+export async function DELETE(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const categoryId = searchParams.get('categoryId');
+
+    if (!categoryId) {
+      return NextResponse.json({ error: '缺少 categoryId' }, { status: 400 });
+    }
+
+    const client = getSupabaseClient();
+
+    // Get category info
+    const { data: category, error: catError } = await client
+      .from('categories')
+      .select('id, name, zip_file_key')
+      .eq('id', categoryId)
+      .maybeSingle();
+
+    if (catError || !category) {
+      return NextResponse.json({ error: '分类不存在' }, { status: 404 });
+    }
+
+    if (!category.zip_file_key) {
+      return NextResponse.json({ error: '该分类没有ZIP包' }, { status: 400 });
+    }
+
+    // Delete from OSS
+    try {
+      const { ossDeleteFile } = await import('@/storage/oss-client');
+      await ossDeleteFile({ key: category.zip_file_key });
+      console.log(`[PackageDelete] ZIP deleted from OSS: ${category.zip_file_key}`);
+    } catch (err) {
+      console.error('[PackageDelete] OSS delete error (continuing):', err);
+    }
+
+    // Clear zip_file_key in database
+    const { error: updateError } = await client
+      .from('categories')
+      .update({ zip_file_key: null })
+      .eq('id', categoryId);
+
+    if (updateError) {
+      console.error('[PackageDelete] Failed to update category:', updateError);
+      return NextResponse.json({ error: '更新分类信息失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${category.name} ZIP包已删除`,
+    });
+  } catch (err) {
+    console.error('[PackageDelete] Error:', err);
+    return NextResponse.json(
+      { error: '删除ZIP失败: ' + (err instanceof Error ? err.message : String(err)) },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   const authError = requireAdmin(request);
   if (authError) return authError;

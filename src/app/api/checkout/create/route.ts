@@ -89,7 +89,8 @@ export async function POST(request: Request) {
         ],
         application_context: {
           brand_name: 'LXNUYYHYI',
-          landing_page: 'NO_PREFERENCE',
+          locale: 'en-US',
+          landing_page: 'BILLING',
           user_action: 'PAY_NOW',
           return_url: `${finalBaseUrl}/checkout/success`,
           cancel_url: `${finalBaseUrl}/checkout/cancel`,

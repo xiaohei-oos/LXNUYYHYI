@@ -3,6 +3,9 @@ import type { Metadata } from 'next';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { resolveImageUrl } from '@/storage/oss-client';
 import CategoryBuyClient from './CategoryBuyClient';
+import ImageGrid from './ImageGrid';
+
+const IMAGES_PER_PAGE = 24;
 
 export const dynamic = 'force-dynamic';
 
@@ -203,18 +206,20 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   const cat = category as Category;
 
+  // Only load first page of images for SSR (performance optimization)
   const { data: images } = await client
     .from('vision_images')
     .select('id, title, thumbnail_url, sort_order')
     .eq('category_id', cat.id)
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .range(0, IMAGES_PER_PAGE - 1);
 
   const imgs = (images || []) as VisionImage[];
 
   // Resolve cover image URL (OSS key → signed URL)
   const resolvedCoverImage = await resolveImageUrl(cat.cover_image, 86400);
 
-  // Resolve thumbnail URLs for all images
+  // Resolve thumbnail URLs for first page only
   const imgsWithResolvedUrls = await Promise.all(
     imgs.map(async (img) => ({
       ...img,
@@ -368,32 +373,14 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         </div>
       </div>
 
-      {/* Image Preview Grid */}
+      {/* Image Preview Grid - Client-side lazy loading */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <h2 className="text-xl font-semibold text-foreground mb-6">
-          Preview ({imgsWithResolvedUrls.length} images)
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {imgsWithResolvedUrls.map((img) => (
-            <div
-              key={img.id}
-              className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-secondary border border-border"
-            >
-              <img
-                src={img.thumbnail_url}
-                alt={`${cat.name} vision board image - ${img.title} by LXNUYYHYI`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
-                width={400}
-                height={300}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 left-0 right-0 p-3 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <p className="text-sm font-medium truncate">{img.title}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ImageGrid
+          slug={slug}
+          initialImages={imgsWithResolvedUrls}
+          totalCount={cat.image_count}
+          pageSize={IMAGES_PER_PAGE}
+        />
       </div>
 
       {/* SEO Content Section */}

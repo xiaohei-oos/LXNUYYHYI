@@ -19,6 +19,7 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { HttpRequest } from '@smithy/protocol-http';
 
 // Singleton S3 client
 let _s3Client: S3Client | null = null;
@@ -100,13 +101,18 @@ export async function ossDeleteFile(params: { key: string }): Promise<boolean> {
 }
 
 /**
- * Generate a presigned URL for downloading a file
+ * Generate a presigned URL for downloading a file.
+ * Optionally includes Alibaba Cloud OSS image processing parameters
+ * (x-oss-process) in the signed request so they don't invalidate the signature.
+ *
  * @param key - The S3 key of the file
  * @param expireTime - Expiration time in seconds (default: 3600 = 1 hour)
+ * @param ossProcess - Optional OSS image processing param value (e.g. "image/resize,w_600/quality,q_85")
  */
 export async function ossGeneratePresignedUrl(params: {
   key: string;
   expireTime?: number;
+  ossProcess?: string;
 }): Promise<string> {
   const client = getS3Client();
   const bucket = getBucketName();
@@ -116,6 +122,24 @@ export async function ossGeneratePresignedUrl(params: {
     Key: params.key,
   });
 
+  // If OSS image processing is requested, inject x-oss-process into the
+  // request via middleware BEFORE signing, so the signature covers it.
+  if (params.ossProcess) {
+    const ossProcess = params.ossProcess;
+    command.middlewareStack.add(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (next: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+          if (HttpRequest.isInstance(args.request)) {
+            args.request.query['x-oss-process'] = ossProcess;
+          }
+          return next(args);
+        },
+      { step: 'serialize', priority: 'low' }
+    );
+  }
+
   const url = await getSignedUrl(client, command, {
     expiresIn: params.expireTime || 3600,
   });
@@ -124,15 +148,40 @@ export async function ossGeneratePresignedUrl(params: {
 }
 
 /**
- * Check if a value is an OSS key (not a local path)
- * OSS keys do NOT start with '/'
+ * Check if a value is an OSS key (not a local path or full URL)
+ * OSS keys do NOT start with '/' or 'http'
  */
 export function isOssKey(value: string): boolean {
   if (!value) return false;
-  // Local paths start with '/' like '/images/xxx.jpg'
-  // Full URLs start with 'http'
-  // OSS keys are like 'thumbnails/xxx.jpg' or 'hd/xxx.jpg'
   return !value.startsWith('/') && !value.startsWith('http');
+}
+
+/**
+ * Check if a URL belongs to our OSS bucket
+ */
+function isOssBucketUrl(value: string): boolean {
+  if (!value.startsWith('http')) return false;
+  const endpoint = process.env.OSS_ENDPOINT;
+  const bucket = process.env.OSS_BUCKET_NAME;
+  if (!endpoint || !bucket) return false;
+  return value.startsWith(`https://${bucket}.${endpoint}/`);
+}
+
+/**
+ * Extract OSS key and process params from a bucket URL
+ */
+function parseOssBucketUrl(value: string): { key: string; processParam: string } | null {
+  const endpoint = process.env.OSS_ENDPOINT;
+  const bucket = process.env.OSS_BUCKET_NAME;
+  if (!endpoint || !bucket) return null;
+  const prefix = `https://${bucket}.${endpoint}/`;
+  if (!value.startsWith(prefix)) return null;
+  const afterPrefix = value.slice(prefix.length);
+  const [keyAndParams] = afterPrefix.split('?');
+  const key = decodeURIComponent(keyAndParams);
+  const processMatch = value.match(/[?&]x-oss-process=([^&]+)/);
+  const processParam = processMatch ? processMatch[1] : '';
+  return { key, processParam };
 }
 
 /**
@@ -151,19 +200,40 @@ export function getOssPublicUrl(key: string): string {
 /**
  * Resolve an image URL from a database value
  * - If it's a local path (/images/xxx.jpg), return as-is
- * - If it's an OSS key (thumbnails/xxx.jpg), generate a signed URL
- * - If it's already a full URL, return as-is
+ * - If it's our OSS bucket URL (private bucket), convert to key and sign
+ *   (preserving x-oss-process params for thumbnails)
+ * - If it's an OSS key (images/xxx.jpg), generate a signed URL
+ * - If it's another full URL (e.g. coze storage), return as-is
  */
 export async function resolveImageUrl(
   value: string,
   signedUrlExpireTime: number = 86400 // 24 hours for thumbnails
 ): Promise<string> {
   if (!value) return '';
-  // Local path or full URL - return as-is
-  if (value.startsWith('/') || value.startsWith('http')) {
+
+  // Local path - return as-is
+  if (value.startsWith('/')) {
     return value;
   }
-  // OSS key - generate signed URL
+
+  // Our OSS bucket URL - need to sign it (bucket is private)
+  if (isOssBucketUrl(value)) {
+    const parsed = parseOssBucketUrl(value);
+    if (parsed) {
+      return ossGeneratePresignedUrl({
+        key: parsed.key,
+        expireTime: signedUrlExpireTime,
+        ossProcess: parsed.processParam || undefined,
+      });
+    }
+  }
+
+  // Other full URLs (e.g. coze storage) - return as-is
+  if (value.startsWith('http')) {
+    return value;
+  }
+
+  // OSS key - generate signed URL (no image processing for raw keys)
   return ossGeneratePresignedUrl({ key: value, expireTime: signedUrlExpireTime });
 }
 

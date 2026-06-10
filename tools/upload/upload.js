@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand } = require('@aws-sdk/client-s3');
 const { createClient } = require('@supabase/supabase-js');
 const archiver = require('archiver');
 const dotenv = require('dotenv');
@@ -123,6 +123,99 @@ async function uploadBufferToOSS(key, buffer, contentType) {
     CacheControl: 'public, max-age=31536000',
   });
   await s3Client.send(command);
+}
+
+// Multipart upload for large files (supports multi-GB)
+async function multipartUploadToOSS(key, filePath, contentType) {
+  const PART_SIZE = 100 * 1024 * 1024; // 100MB per part
+  const fileSize = fs.statSync(filePath).size;
+
+  console.log(`  File size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`  Part size: ${PART_SIZE / 1024 / 1024} MB`);
+
+  // If file is small enough, use simple upload
+  if (fileSize <= PART_SIZE) {
+    console.log('  File is small, using simple upload...');
+    const buffer = fs.readFileSync(filePath);
+    await uploadBufferToOSS(key, buffer, contentType);
+    console.log('  \u2713 Upload complete!');
+    return;
+  }
+
+  // Create multipart upload
+  console.log('  Starting multipart upload...');
+  const createCmd = new CreateMultipartUploadCommand({
+    Bucket: OSS_CONFIG.bucket,
+    Key: key,
+    ContentType: contentType,
+    CacheControl: 'public, max-age=31536000',
+  });
+  const createRes = await s3Client.send(createCmd);
+  const uploadId = createRes.UploadId;
+  const parts = [];
+  const totalParts = Math.ceil(fileSize / PART_SIZE);
+
+  try {
+    const fileStream = fs.openSync(filePath, 'r');
+    let uploadedParts = 0;
+
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const start = (partNumber - 1) * PART_SIZE;
+      const end = Math.min(start + PART_SIZE, fileSize);
+      const partSize = end - start;
+
+      const buffer = Buffer.alloc(partSize);
+      fs.readSync(fileStream, buffer, 0, partSize, start);
+
+      console.log(`  Uploading part ${partNumber}/${totalParts} (${(partSize / 1024 / 1024).toFixed(2)} MB)...`);
+
+      const uploadCmd = new UploadPartCommand({
+        Bucket: OSS_CONFIG.bucket,
+        Key: key,
+        PartNumber: partNumber,
+        UploadId: uploadId,
+        Body: buffer,
+      });
+      const uploadRes = await s3Client.send(uploadCmd);
+
+      parts.push({
+        PartNumber: partNumber,
+        ETag: uploadRes.ETag,
+      });
+
+      uploadedParts++;
+      const progress = ((uploadedParts / totalParts) * 100).toFixed(1);
+      console.log(`  \u2713 Part ${partNumber} done (${progress}% total)`);
+    }
+
+    fs.closeSync(fileStream);
+
+    // Complete multipart upload
+    console.log('  Completing multipart upload...');
+    const completeCmd = new CompleteMultipartUploadCommand({
+      Bucket: OSS_CONFIG.bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: parts.sort((a, b) => a.PartNumber - b.PartNumber),
+      },
+    });
+    await s3Client.send(completeCmd);
+    console.log('  \u2713 Multipart upload complete!');
+
+  } catch (err) {
+    // Abort on failure
+    console.error('  \u2717 Upload failed, aborting multipart upload...');
+    try {
+      const abortCmd = new AbortMultipartUploadCommand({
+        Bucket: OSS_CONFIG.bucket,
+        Key: key,
+        UploadId: uploadId,
+      });
+      await s3Client.send(abortCmd);
+    } catch { /* ignore abort errors */ }
+    throw err;
+  }
 }
 
 // ============================================================
@@ -574,6 +667,7 @@ Usage:
   node upload.js --zip-all                          Create ZIPs for all categories
   node upload.js --list                             List all categories and counts
   node upload.js --delete <slug> --image-id <id>    Delete a specific image
+  node upload.js --upload-zip <slug> --file <path>  Upload local ZIP to OSS & link to category
 
 Category Slugs:
   wealth-finance        财富与财务
@@ -637,6 +731,18 @@ async function main() {
     // Create ZIPs for all categories
     if (args['zip-all'] || args.zip === 'true') {
       await createAllZips();
+      return;
+    }
+
+    // Upload local ZIP file for single category
+    if (args['upload-zip']) {
+      const slug = args['upload-zip'];
+      const zipPath = args.file;
+      if (!zipPath) {
+        console.error('❌ Missing --file parameter. Usage: node upload.js --upload-zip <slug> --file <path-to-zip>');
+        process.exit(1);
+      }
+      await uploadZipPackage(slug, zipPath);
       return;
     }
 

@@ -1,8 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { ossDeleteFile, isOssKey } from '@/storage/oss-client';
+import { requireAdmin } from '../_auth';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -32,7 +35,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { categoryId, title, titleCn, hdImageKey, thumbnailUrl } = body;
@@ -81,7 +87,10 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -99,25 +108,22 @@ export async function DELETE(request: Request) {
       .eq('id', id)
       .maybeSingle();
 
-    // Delete from OSS if keys exist
+    // Delete from OSS if keys exist (import dynamically to avoid circular)
     if (img) {
-      // Delete thumbnail from OSS
+      const { ossDeleteFile, isOssKey } = await import('@/storage/oss-client');
       if (img.thumbnail_url && isOssKey(img.thumbnail_url)) {
         try {
           await ossDeleteFile({ key: img.thumbnail_url });
         } catch (e) {
           console.error('Failed to delete thumbnail from OSS:', e);
-          // Continue even if OSS delete fails
         }
       }
 
-      // Delete HD image from OSS
       if (img.hd_image_key && isOssKey(img.hd_image_key)) {
         try {
           await ossDeleteFile({ key: img.hd_image_key });
         } catch (e) {
           console.error('Failed to delete HD image from OSS:', e);
-          // Continue even if OSS delete fails
         }
       }
     }

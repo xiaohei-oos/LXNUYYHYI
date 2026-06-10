@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { requireAdmin } from '../_auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const client = getSupabaseClient();
     const { data, error } = await client

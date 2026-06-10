@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const ADMIN_USERNAME = 'xysales';
-const ADMIN_PASSWORD = 'Xiaoyunmg1216==';
 
 export async function POST(request: NextRequest) {
   try {
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      console.error('ADMIN_PASSWORD environment variable is not set');
+      return NextResponse.json({ error: '服务器配置错误' }, { status: 500 });
+    }
+
     const body = await request.json();
     const { username, password } = body;
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    if (username === ADMIN_USERNAME && password === adminPassword) {
       const response = NextResponse.json({ success: true });
 
       // Set a secure HTTP-only cookie

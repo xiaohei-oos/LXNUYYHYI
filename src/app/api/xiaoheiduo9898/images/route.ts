@@ -9,14 +9,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
     const categoryId = searchParams.get('categoryId');
 
     const client = getSupabaseClient();
     let query = client
       .from('vision_images')
-      .select('id, title, title_cn, thumbnail_url, hd_image_key, category_id, categories!inner(name, name_cn, slug)')
+      .select('id, title, title_cn, thumbnail_url, hd_image_key, category_id')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (categoryId) {
       query = query.eq('category_id', categoryId);
@@ -94,9 +95,83 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const idsParam = searchParams.get('ids');
 
+    // Batch delete mode: ?ids=id1,id2,id3
+    if (idsParam) {
+      const ids = idsParam.split(',').filter(Boolean);
+      if (ids.length === 0) {
+        return NextResponse.json({ error: 'No ids provided' }, { status: 400 });
+      }
+
+      const client = getSupabaseClient();
+
+      // Get images info before deleting (need keys for OSS cleanup)
+      const { data: imgs } = await client
+        .from('vision_images')
+        .select('id, category_id, thumbnail_url, hd_image_key')
+        .in('id', ids);
+
+      // Delete from OSS
+      if (imgs && imgs.length > 0) {
+        const { ossDeleteFile, isOssKey } = await import('@/storage/oss-client');
+        let ossDeleted = 0;
+        let ossFailed = 0;
+
+        for (const img of imgs) {
+          if (img.thumbnail_url && isOssKey(img.thumbnail_url)) {
+            try { await ossDeleteFile({ key: img.thumbnail_url }); ossDeleted++; }
+            catch (e) { console.error('Batch: Failed to delete OSS thumbnail:', e); ossFailed++; }
+          }
+          if (img.hd_image_key && isOssKey(img.hd_image_key)) {
+            try { await ossDeleteFile({ key: img.hd_image_key }); ossDeleted++; }
+            catch (e) { console.error('Batch: Failed to delete OSS HD image:', e); ossFailed++; }
+          }
+        }
+        console.log(`Batch delete OSS: ${ossDeleted} deleted, ${ossFailed} failed`);
+      }
+
+      // Delete from database in batches
+      const BATCH_SIZE = 100;
+      let dbDeleted = 0;
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = ids.slice(i, i + BATCH_SIZE);
+        const { error: delError, count } = await client
+          .from('vision_images')
+          .delete({ count: 'exact' })
+          .in('id', batch);
+        if (delError) {
+          console.error('Batch delete DB error:', delError);
+        } else {
+          dbDeleted += count || batch.length;
+        }
+      }
+
+      // Update image_count for affected categories
+      if (imgs && imgs.length > 0) {
+        const affectedCatIds = [...new Set(imgs.map(img => img.category_id))];
+        for (const catId of affectedCatIds) {
+          const { count } = await client
+            .from('vision_images')
+            .select('*', { count: 'exact', head: true })
+            .eq('category_id', catId);
+          await client
+            .from('categories')
+            .update({ image_count: count || 0 })
+            .eq('id', catId);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        deletedCount: dbDeleted,
+        message: `已删除 ${dbDeleted} 张图片`,
+      });
+    }
+
+    // Single delete mode: ?id=xxx
     if (!id) {
-      return NextResponse.json({ error: 'Missing image id' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing image id or ids' }, { status: 400 });
     }
 
     const client = getSupabaseClient();

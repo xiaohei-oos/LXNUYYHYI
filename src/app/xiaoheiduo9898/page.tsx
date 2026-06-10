@@ -49,6 +49,10 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [images, setImages] = useState<VisionImage[]>([]);
+  const [imagesPage, setImagesPage] = useState(1);
+  const [imagesHasMore, setImagesHasMore] = useState(false);
+  const [imagesTotal, setImagesTotal] = useState(0);
+  const IMAGES_PAGE_SIZE = 100;
   const [stats, setStats] = useState({ totalImages: 0, totalOrders: 0, totalRevenue: 0, paidOrders: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -97,7 +101,7 @@ export default function AdminPage() {
       const [catRes, orderRes, imgRes, statsRes] = await Promise.all([
         fetch('/api/xiaoheiduo9898/categories'),
         fetch('/api/xiaoheiduo9898/orders'),
-        fetch('/api/xiaoheiduo9898/images?limit=50'),
+        fetch(`/api/xiaoheiduo9898/images?limit=${IMAGES_PAGE_SIZE}&offset=0`),
         fetch('/api/xiaoheiduo9898/stats'),
       ]);
       if (catRes.ok) setCategories((await catRes.json()).categories);
@@ -126,6 +130,8 @@ export default function AdminPage() {
           }
         }
         setImages(imgData);
+        setImagesPage(1);
+        setImagesHasMore(imgData.length === IMAGES_PAGE_SIZE);
       }
       if (statsRes.ok) setStats((await statsRes.json()));
     } catch (e) {
@@ -242,7 +248,35 @@ export default function AdminPage() {
         ) : (
           <>
             {tab === 'dashboard' && <DashboardTab stats={stats} categories={categories} />}
-            {tab === 'images' && <ImagesTab images={images} categories={categories} onRefresh={fetchData} />}
+            {tab === 'images' && <ImagesTab images={images} categories={categories} onRefresh={fetchData} hasMore={imagesHasMore} onLoadMore={async () => {
+              const nextPage = imagesPage + 1;
+              const offset = nextPage * IMAGES_PAGE_SIZE;
+              const res = await fetch(`/api/xiaoheiduo9898/images?limit=${IMAGES_PAGE_SIZE}&offset=${offset}`);
+              if (res.ok) {
+                const data = await res.json();
+                const newImgs = data.images as VisionImage[];
+                // Resolve URLs
+                const keys = newImgs.map(img => img.thumbnail_url).filter(Boolean);
+                if (keys.length > 0) {
+                  try {
+                    const resRes = await fetch('/api/resolve-urls', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ keys }),
+                    });
+                    if (resRes.ok) {
+                      const { urls } = await resRes.json();
+                      newImgs.forEach((img, i) => {
+                        if (img.thumbnail_url && urls[i]) img.thumbnail_url = urls[i];
+                      });
+                    }
+                  } catch (e) { console.error(e); }
+                }
+                setImages(prev => [...prev, ...newImgs]);
+                setImagesPage(nextPage);
+                setImagesHasMore(newImgs.length === IMAGES_PAGE_SIZE);
+              }
+            }} />}
             {tab === 'upload' && <UploadTab categories={categories} onRefresh={fetchData} />}
             {tab === 'dedup' && <DedupTab categories={categories} onRefresh={fetchData} />}
             {tab === 'categories' && <CategoriesTab categories={categories} onRefresh={fetchData} />}
@@ -314,8 +348,10 @@ function StatCard({ label, value, icon }: { label: string; value: string | numbe
   );
 }
 
-function ImagesTab({ images, categories, onRefresh }: { images: VisionImage[]; categories: Category[]; onRefresh: () => void }) {
+function ImagesTab({ images, categories, onRefresh, hasMore, onLoadMore }: { images: VisionImage[]; categories: Category[]; onRefresh: () => void; hasMore: boolean; onLoadMore: () => void }) {
   const [filterCat, setFilterCat] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
   const filtered = filterCat ? images.filter(i => i.category_id === filterCat) : images;
   const catMap = new Map(categories.map(c => [c.id, c]));
 
@@ -326,14 +362,59 @@ function ImagesTab({ images, categories, onRefresh }: { images: VisionImage[]; c
     else alert('删除失败');
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(i => i.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`确定要删除选中的 ${selectedIds.size} 张图片吗？\n\n此操作将同时删除 OSS 服务器上的图片文件，不可撤销！`)) return;
+
+    setBatchDeleting(true);
+    try {
+      const ids = Array.from(selectedIds).join(',');
+      const res = await fetch(`/api/xiaoheiduo9898/images?ids=${ids}`, { method: 'DELETE' });
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message || `已删除 ${selectedIds.size} 张图片`);
+        setSelectedIds(new Set());
+        onRefresh();
+      } else {
+        const data = await res.json();
+        alert(`删除失败: ${data.error}`);
+      }
+    } catch {
+      alert('删除失败，网络错误');
+    } finally {
+      setBatchDeleting(false);
+    }
+  };
+
+  const exitSelectMode = () => {
+    setSelectedIds(new Set());
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h2 className="text-xl font-bold text-gray-900">图片管理</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <select
             value={filterCat}
-            onChange={e => setFilterCat(e.target.value)}
+            onChange={e => { setFilterCat(e.target.value); setSelectedIds(new Set()); }}
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
           >
             <option value="">全部分类</option>
@@ -342,17 +423,69 @@ function ImagesTab({ images, categories, onRefresh }: { images: VisionImage[]; c
             ))}
           </select>
           <span className="text-sm text-gray-500">共 {filtered.length} 张</span>
+
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-sm text-blue-600 font-medium">已选 {selectedIds.size} 张</span>
+              <button
+                onClick={handleBatchDelete}
+                disabled={batchDeleting}
+                className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {batchDeleting ? '删除中...' : `删除选中 (${selectedIds.size})`}
+              </button>
+              <button
+                onClick={exitSelectMode}
+                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                取消选择
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Select all bar */}
+      <div className="flex items-center gap-3 mb-4 px-1">
+        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={filtered.length > 0 && selectedIds.size === filtered.length}
+            onChange={toggleSelectAll}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          全选当前列表
+        </label>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filtered.map(img => {
           const cat = catMap.get(img.category_id);
+          const isSelected = selectedIds.has(img.id);
           return (
-            <div key={img.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden group">
+            <div
+              key={img.id}
+              className={`bg-white rounded-xl border-2 overflow-hidden group cursor-pointer transition-colors ${
+                isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+              }`}
+              onClick={() => toggleSelect(img.id)}
+            >
               <div className="aspect-[4/3] relative">
                 <img src={img.thumbnail_url} alt={img.title} className="w-full h-full object-cover" />
+                {/* Selection checkbox overlay */}
+                <div className="absolute top-2 left-2">
+                  <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                    isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white/80 border-gray-400 group-hover:border-blue-400'
+                  }`}>
+                    {isSelected && (
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="p-3">
+              <div className="p-3" onClick={e => e.stopPropagation()}>
                 <p className="text-sm font-medium text-gray-900 truncate">{img.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{cat?.name_cn || '未知分类'}</p>
                 <button
@@ -366,6 +499,21 @@ function ImagesTab({ images, categories, onRefresh }: { images: VisionImage[]; c
           );
         })}
       </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-gray-400">暂无图片</div>
+      )}
+
+      {hasMore && filtered.length > 0 && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={onLoadMore}
+            className="px-6 py-2 text-sm bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            加载更多
+          </button>
+        </div>
+      )}
     </div>
   );
 }

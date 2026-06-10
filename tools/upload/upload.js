@@ -597,6 +597,66 @@ async function listCategories() {
 }
 
 // ============================================================
+// Upload Local ZIP Package to OSS
+// ============================================================
+
+async function uploadZipPackage(categorySlug, zipFilePath) {
+  // Validate category
+  if (!CATEGORY_MAP[categorySlug]) {
+    console.error(`❌ Unknown category slug: "${categorySlug}"`);
+    console.log(`   Available: ${Object.keys(CATEGORY_MAP).join(', ')}`);
+    process.exit(1);
+  }
+
+  // Validate file
+  if (!fs.existsSync(zipFilePath)) {
+    console.error(`❌ File not found: ${zipFilePath}`);
+    process.exit(1);
+  }
+
+  const ext = path.extname(zipFilePath).toLowerCase();
+  if (ext !== '.zip') {
+    console.error(`❌ File must be a .zip file, got: ${ext}`);
+    process.exit(1);
+  }
+
+  const category = await getCategoryBySlug(categorySlug);
+  const categoryInfo = CATEGORY_MAP[categorySlug];
+  const fileSize = fs.statSync(zipFilePath).size;
+  const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
+
+  console.log(`📦 Category: ${categoryInfo.name} (${categoryInfo.name_cn})`);
+  console.log(`📁 ZIP file: ${zipFilePath}`);
+  console.log(`📏 File size: ${fileSizeMB} MB\n`);
+
+  // Delete old ZIP if exists
+  if (category.zip_file_key) {
+    console.log(`  Old ZIP found: ${category.zip_file_key}`);
+    try {
+      await deleteFromOSS(category.zip_file_key);
+      console.log('  ✅ Old ZIP deleted from OSS');
+    } catch (err) {
+      console.log(`  ⚠️  Old ZIP delete failed (may not exist): ${err.message}`);
+    }
+  }
+
+  // Upload new ZIP
+  const zipKey = `zips/${categorySlug}.zip`;
+  console.log(`\n  Uploading to OSS: ${zipKey}`);
+
+  await multipartUploadToOSS(zipKey, zipFilePath, 'application/zip');
+
+  // Update database
+  await updateCategoryZipKey(category.id, zipKey, fileSize);
+  console.log(`  ✅ Database updated (zip_file_key = ${zipKey})`);
+
+  console.log(`\n🎉 ZIP package uploaded successfully!`);
+  console.log(`  Category: ${categoryInfo.name}`);
+  console.log(`  OSS Key: ${zipKey}`);
+  console.log(`  Size: ${fileSizeMB} MB\n`);
+}
+
+// ============================================================
 // Delete Image
 // ============================================================
 

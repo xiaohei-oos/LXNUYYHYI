@@ -36,7 +36,7 @@ interface VisionImage {
   categories?: { name: string; name_cn: string; slug: string };
 }
 
-type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders';
+type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders' | 'dedup';
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -141,6 +141,7 @@ export default function AdminPage() {
     { key: 'dashboard', label: '仪表盘', icon: '📊' },
     { key: 'images', label: '图片管理', icon: '🖼️' },
     { key: 'upload', label: '上传图片', icon: '📤' },
+    { key: 'dedup', label: '图片去重', icon: '🧹' },
     { key: 'categories', label: '分类管理', icon: '📁' },
     { key: 'orders', label: '订单管理', icon: '📦' },
   ];
@@ -243,6 +244,7 @@ export default function AdminPage() {
             {tab === 'dashboard' && <DashboardTab stats={stats} categories={categories} />}
             {tab === 'images' && <ImagesTab images={images} categories={categories} onRefresh={fetchData} />}
             {tab === 'upload' && <UploadTab categories={categories} onRefresh={fetchData} />}
+            {tab === 'dedup' && <DedupTab categories={categories} onRefresh={fetchData} />}
             {tab === 'categories' && <CategoriesTab categories={categories} onRefresh={fetchData} />}
             {tab === 'orders' && <OrdersTab orders={orders} />}
           </>
@@ -625,6 +627,193 @@ function OrdersTab({ orders }: { orders: Order[] }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DuplicateGroup {
+  title: string;
+  categoryName: string;
+  categoryNameCn: string;
+  categoryId: string;
+  keepId: string;
+  duplicateIds: string[];
+  duplicateCount: number;
+}
+
+function DedupTab({ categories, onRefresh }: { categories: Category[]; onRefresh: () => void }) {
+  const [scanning, setScanning] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+  const [totalDuplicates, setTotalDuplicates] = useState(0);
+  const [totalGroups, setTotalGroups] = useState(0);
+  const [scanned, setScanned] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [filterCat, setFilterCat] = useState('');
+
+  const handleScan = async () => {
+    setScanning(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/dedup');
+      if (res.ok) {
+        const data = await res.json();
+        setDuplicateGroups(data.duplicateGroups || []);
+        setTotalDuplicates(data.totalDuplicates || 0);
+        setTotalGroups(data.totalGroups || 0);
+        setScanned(true);
+      } else {
+        const data = await res.json();
+        setResult(`扫描失败: ${data.error}`);
+      }
+    } catch {
+      setResult('扫描失败，网络错误');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleDedup = async () => {
+    if (!confirm(`确定要删除 ${totalDuplicates} 条重复图片吗？\n\n操作将：\n1. 从数据库删除重复记录（保留每组最早的一条）\n2. 从 OSS 服务器删除对应的图片文件\n\n此操作不可撤销！`)) {
+      return;
+    }
+
+    setDeduping(true);
+    setResult(null);
+    try {
+      const body: { categoryIds?: string[] } = {};
+      if (filterCat) {
+        body.categoryIds = [filterCat];
+      }
+      const res = await fetch('/api/xiaoheiduo9898/dedup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setResult(data.message);
+        setDuplicateGroups([]);
+        setTotalDuplicates(0);
+        setTotalGroups(0);
+        setScanned(false);
+        onRefresh();
+      } else {
+        const data = await res.json();
+        setResult(`去重失败: ${data.error}`);
+      }
+    } catch {
+      setResult('去重失败，网络错误');
+    } finally {
+      setDeduping(false);
+    }
+  };
+
+  // Filter duplicate groups by category
+  const filteredGroups = filterCat
+    ? duplicateGroups.filter(g => g.categoryId === filterCat)
+    : duplicateGroups;
+  const filteredTotal = filteredGroups.reduce((sum, g) => sum + g.duplicateCount, 0);
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">图片去重</h2>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <p className="text-sm text-gray-600 mb-4">
+          扫描数据库中相同分类下相同标题的重复图片，保留每组最早的一条记录，删除其余重复项。
+          删除时会同时清理 OSS 服务器上对应的图片文件。
+        </p>
+
+        <div className="flex items-center gap-4 flex-wrap">
+          <select
+            value={filterCat}
+            onChange={e => setFilterCat(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
+          >
+            <option value="">全部分类</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name_cn}</option>
+            ))}
+          </select>
+
+          <button
+            onClick={handleScan}
+            disabled={scanning}
+            className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {scanning ? '扫描中...' : '扫描重复图片'}
+          </button>
+
+          {scanned && totalDuplicates > 0 && (
+            <button
+              onClick={handleDedup}
+              disabled={deduping}
+              className="px-5 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {deduping ? '去重中...' : `一键去重（${filterCat ? filteredTotal : totalDuplicates} 条）`}
+            </button>
+          )}
+        </div>
+
+        {result && (
+          <div className={`mt-4 px-4 py-3 rounded-lg text-sm ${
+            result.includes('失败') ? 'bg-red-50 border border-red-200 text-red-600' :
+            'bg-green-50 border border-green-200 text-green-700'
+          }`}>
+            {result}
+          </div>
+        )}
+      </div>
+
+      {scanned && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="text-sm font-medium text-gray-700">重复图片详情</h3>
+            <span className="text-sm text-gray-500">
+              共 {filteredGroups.length} 组重复，{filteredTotal} 条多余记录
+            </span>
+          </div>
+
+          {filteredGroups.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {totalDuplicates === 0 ? '没有发现重复图片，数据很干净！' : '该分类下没有重复图片'}
+            </div>
+          ) : (
+            <div className="max-h-96 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500">图片标题</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500">所属分类</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500">重复数量</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500">保留记录</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-500">删除记录</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredGroups.map((group, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-2 text-gray-900 truncate max-w-[200px]">{group.title}</td>
+                      <td className="px-4 py-2 text-gray-600">{group.categoryNameCn}</td>
+                      <td className="px-4 py-2">
+                        <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
+                          {group.duplicateCount} 条重复
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-gray-500 font-mono text-xs">{group.keepId.slice(0, 8)}...</td>
+                      <td className="px-4 py-2 text-gray-400 font-mono text-xs">
+                        {group.duplicateIds.slice(0, 2).map(id => id.slice(0, 8)).join(', ')}
+                        {group.duplicateIds.length > 2 ? ` 等${group.duplicateIds.length}条` : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

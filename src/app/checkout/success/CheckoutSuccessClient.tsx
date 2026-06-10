@@ -14,16 +14,37 @@ interface Order {
   status: string;
 }
 
-export default function CheckoutSuccessClient({ token }: { token: string }) {
+export default function CheckoutSuccessClient({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
-    const capturePayment = async () => {
+    const init = async () => {
       try {
-        const res = await fetch(`/api/checkout/capture?token=${token}`);
+        // Await searchParams (Next.js 15+ async)
+        const params = await searchParams;
+
+        // PayPal returns ?token=ORDER_ID, also try PayerID param
+        // Fallback: check window.location.search directly
+        let token = typeof params.token === 'string' ? params.token : null;
+
+        // If searchParams didn't have token, try parsing URL directly
+        if (!token && typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          token = urlParams.get('token');
+        }
+
+        console.log('[CheckoutSuccess] token:', token, 'params:', JSON.stringify(params));
+
+        if (!token) {
+          setError('No payment token found. If you completed payment, please check your email or contact support.');
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`/api/checkout/capture?token=${encodeURIComponent(token)}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -32,15 +53,16 @@ export default function CheckoutSuccessClient({ token }: { token: string }) {
         }
 
         setOrder(data.order);
-      } catch {
+      } catch (err) {
+        console.error('[CheckoutSuccess] Error:', err);
         setError('Failed to verify payment. Please refresh the page.');
       } finally {
         setLoading(false);
       }
     };
 
-    capturePayment();
-  }, [token]);
+    init();
+  }, [searchParams]);
 
   const handleDownload = async () => {
     if (!order?.download_token) return;

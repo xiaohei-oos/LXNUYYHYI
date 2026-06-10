@@ -648,6 +648,7 @@ function UploadTab({ categories, onRefresh }: { categories: Category[]; onRefres
 function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRefresh: () => void }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState('');
+  const [generatingZip, setGeneratingZip] = useState<string | null>(null);
 
   const handleSavePrice = async (id: string) => {
     const priceDollars = parseFloat(editPrice);
@@ -668,9 +669,71 @@ function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRe
     }
   };
 
+  const handleGenerateAllZip = async () => {
+    const catsWithoutZip = categories.filter(c => !c.zip_file_key && c.image_count > 0);
+    const catsWithZip = categories.filter(c => c.zip_file_key && c.image_count > 0);
+    const total = catsWithoutZip.length + catsWithZip.length;
+    if (total === 0) { alert('没有分类有图片，无需打包'); return; }
+    const msg = catsWithoutZip.length > 0
+      ? `将依次为 ${total} 个分类生成ZIP包（其中 ${catsWithoutZip.length} 个未打包），确定吗？`
+      : `所有分类已打包，是否重新生成全部 ${total} 个分类的ZIP包？`;
+    if (!confirm(msg)) return;
+    for (const cat of categories.filter(c => c.image_count > 0)) {
+      setGeneratingZip(cat.id);
+      try {
+        const res = await fetch('/api/xiaoheiduo9898/packages/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoryId: cat.id }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          console.error(`Failed to generate ZIP for ${cat.name}:`, data.error);
+        }
+      } catch {
+        console.error(`Failed to generate ZIP for ${cat.name}`);
+      }
+    }
+    setGeneratingZip(null);
+    onRefresh();
+    alert('所有分类ZIP包生成完成！');
+  };
+
+  const handleGenerateZip = async (catId: string, catName: string) => {
+    if (!confirm(`确定要为"${catName}"生成ZIP包吗？这可能需要几分钟时间。`)) return;
+    setGeneratingZip(catId);
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/packages/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId: catId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(data.message);
+        onRefresh();
+      } else {
+        alert('生成失败: ' + (data.error || '未知错误'));
+      }
+    } catch {
+      alert('生成失败，请重试');
+    } finally {
+      setGeneratingZip(null);
+    }
+  };
+
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-6">分类管理</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">分类管理</h2>
+        <button
+          onClick={handleGenerateAllZip}
+          disabled={generatingZip !== null}
+          className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+        >
+          {generatingZip ? '打包中...' : '一键打包所有ZIP'}
+        </button>
+      </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
@@ -715,12 +778,21 @@ function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRe
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => { setEditingId(cat.id); setEditPrice((cat.price_cents / 100).toFixed(2)); }}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    改价格
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setEditingId(cat.id); setEditPrice((cat.price_cents / 100).toFixed(2)); }}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      改价格
+                    </button>
+                    <button
+                      onClick={() => handleGenerateZip(cat.id, cat.name_cn || cat.name)}
+                      disabled={generatingZip === cat.id}
+                      className="text-xs text-green-600 hover:underline disabled:text-gray-400"
+                    >
+                      {generatingZip === cat.id ? '生成中...' : cat.zip_file_key ? '重新打包' : '生成ZIP'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

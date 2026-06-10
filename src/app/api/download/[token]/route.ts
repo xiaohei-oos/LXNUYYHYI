@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { ossGeneratePresignedUrl, isOssKey, resolveImageUrl } from '@/storage/oss-client';
+import {
+  ossGeneratePresignedUrl,
+  isOssKey,
+  resolveImageUrl,
+} from '@/storage/oss-client';
 
 export async function GET(
   request: Request,
@@ -40,24 +44,28 @@ export async function GET(
       .eq('id', order.category_id)
       .maybeSingle();
 
-    if (!category?.zip_file_key) {
-      return NextResponse.json({ error: 'Download file not available yet. Please contact support.' }, { status: 404 });
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    if (!category.zip_file_key) {
+      return NextResponse.json(
+        { error: 'Download package is being prepared. Please try again in a few minutes or contact support.' },
+        { status: 404 }
+      );
     }
 
     // Generate signed URL for download
     let downloadUrl: string;
 
     if (isOssKey(category.zip_file_key)) {
-      // Alibaba Cloud OSS
       downloadUrl = await ossGeneratePresignedUrl({
         key: category.zip_file_key,
-        expireTime: 3600, // 1 hour
+        expireTime: 300, // 5 minutes - short lived to prevent sharing
       });
     } else if (category.zip_file_key.startsWith('/') || category.zip_file_key.startsWith('http')) {
-      // Local path or full URL (legacy)
       downloadUrl = category.zip_file_key;
     } else {
-      // Fallback: treat as OSS key
       downloadUrl = await resolveImageUrl(category.zip_file_key);
     }
 
@@ -70,10 +78,12 @@ export async function GET(
       })
       .eq('id', order.id);
 
-    // Return JSON with download URL (frontend will handle the redirect via fetch+blob)
-    return NextResponse.json({ downloadUrl, categoryName: category.name });
+    return NextResponse.json({ downloadUrl, categoryName: category.name, slug: category.slug });
   } catch (err) {
     console.error('Download error:', err);
-    return NextResponse.json({ error: 'Download failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Download failed: ' + (err instanceof Error ? err.message : 'Unknown error') },
+      { status: 500 }
+    );
   }
 }

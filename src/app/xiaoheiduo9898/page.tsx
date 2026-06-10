@@ -13,6 +13,7 @@ interface Category {
   image_count: number;
   price_cents: number;
   zip_file_key: string;
+  zip_file_size: number | null;
   sort_order: number;
 }
 
@@ -321,7 +322,18 @@ function DashboardTab({ stats, categories }: { stats: { totalImages: number; tot
                 <td className="px-4 py-3 text-gray-600">${(cat.price_cents / 100).toFixed(2)}</td>
                 <td className="px-4 py-3">
                   {cat.zip_file_key ? (
-                    <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">已打包</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full w-fit">已打包</span>
+                      {cat.zip_file_size != null && cat.zip_file_size > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {cat.zip_file_size >= 1073741824
+                            ? `${(cat.zip_file_size / 1073741824).toFixed(2)} GB`
+                            : cat.zip_file_size >= 1048576
+                            ? `${(cat.zip_file_size / 1048576).toFixed(1)} MB`
+                            : `${(cat.zip_file_size / 1024).toFixed(0)} KB`}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full">未打包</span>
                   )}
@@ -750,7 +762,18 @@ function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRe
                 </td>
                 <td className="px-4 py-3">
                   {cat.zip_file_key ? (
-                    <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">已打包</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full w-fit">已打包</span>
+                      {cat.zip_file_size != null && cat.zip_file_size > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {cat.zip_file_size >= 1073741824
+                            ? `${(cat.zip_file_size / 1073741824).toFixed(2)} GB`
+                            : cat.zip_file_size >= 1048576
+                            ? `${(cat.zip_file_size / 1048576).toFixed(1)} MB`
+                            : `${(cat.zip_file_size / 1024).toFixed(0)} KB`}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full">未打包</span>
                   )}

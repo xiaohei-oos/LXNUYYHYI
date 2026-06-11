@@ -83,7 +83,7 @@ export async function GET(request: Request) {
       .update({
         status: 'paid',
         email: payerEmail,
-        stripe_payment_intent: captureId, // Reuse field for PayPal capture ID
+        stripe_payment_intent: captureId, // Stores PayPal capture ID
         download_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       })

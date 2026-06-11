@@ -53,8 +53,8 @@ export const orders = pgTable(
 		category_name: varchar("category_name", { length: 100 }).notNull(),
 		amount_cents: integer("amount_cents").notNull(),
 		currency: varchar("currency", { length: 10 }).default("usd").notNull(),
-		stripe_session_id: varchar("stripe_session_id", { length: 255 }).notNull().unique(),
-		stripe_payment_intent: varchar("stripe_payment_intent", { length: 255 }),
+		stripe_session_id: varchar("stripe_session_id", { length: 255 }).notNull().unique(), // stores PayPal order ID
+		stripe_payment_intent: varchar("stripe_payment_intent", { length: 255 }), // stores PayPal capture ID
 		status: varchar("status", { length: 20 }).default("pending").notNull(),
 		download_token: varchar("download_token", { length: 36 }).unique().default(sql`gen_random_uuid()`),
 		download_expires_at: timestamp("download_expires_at", { withTimezone: true }),

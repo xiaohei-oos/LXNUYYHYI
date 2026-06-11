@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分类包售卖愿景板高清图片素材，支持 Stripe 支付和 ZIP 压缩包下载。
+LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分类包售卖愿景板高清图片素材，支持 PayPal 支付和 ZIP 压缩包下载。
 
 ### 商业模式
 
@@ -17,7 +17,7 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 - **UI 组件**: shadcn/ui (基于 Radix UI)
 - **Styling**: Tailwind CSS 4
 - **Database**: Supabase (PostgreSQL)
-- **Payment**: Stripe Checkout
+- **Payment**: PayPal
 - **Storage**: S3 兼容对象存储 (coze-coding-dev-sdk)
 - **Fonts**: Playfair Display (serif) + Inter (sans)
 
@@ -40,7 +40,7 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 │   │       ├── categories/    # 分类列表 API
 │   │       ├── images/        # 图片列表 API
 │   │       ├── checkout/      # 支付创建/验证 API
-│   │       ├── stripe/webhook # Stripe Webhook
+│   │       ├── stripe/webhook # Legacy webhook endpoint (PayPal uses capture flow)
 │   │       ├── download/[token] # 安全下载 API
 │   │       └── admin/         # 后台管理 API
 │   ├── storage/database/
@@ -59,7 +59,7 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 
 - **categories**: 分类表（= 商品，8 个分类，含价格、ZIP文件Key、中英文名称）
 - **vision_images**: 图片表（属于分类，缩略图URL公开，高清图Key私有）
-- **orders**: 订单表（关联分类包，Stripe Session，download_token 一次性下载令牌，24h 过期，最多 3 次下载）
+- **orders**: 订单表（关联分类包，PayPal Order ID（存于stripe_session_id字段），download_token 一次性下载令牌，24h 过期，最多 3 次下载）
 
 ## 中英文分类映射
 
@@ -78,7 +78,7 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 
 1. 浏览 → 首页查看 8 大分类商品卡片
 2. 预览 → 点击分类 → 查看该分类下图片缩略图
-3. 购买 → 点击 Buy Now → Stripe Checkout
+3. 购买 → 点击 Buy Now → PayPal Checkout
 4. 下载 → 支付成功 → 签名 URL 下载分类 ZIP 包
 
 ## 后台管理

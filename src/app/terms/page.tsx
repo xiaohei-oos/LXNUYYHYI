@@ -40,7 +40,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-serif font-semibold text-foreground mt-8 mb-3">3. Purchases and Payments</h2>
             <ul className="list-disc pl-6 text-muted-foreground space-y-1">
               <li>All prices are listed in U.S. dollars (USD) and are subject to change without prior notice.</li>
-              <li>Payments are processed securely through Stripe. By submitting payment, you authorize Stripe to charge your selected payment method.</li>
+              <li>Payments are processed securely through PayPal. By submitting payment, you authorize PayPal to charge your selected payment method.</li>
               <li>All purchases are final. Due to the digital nature of our products, we do not offer refunds once the download link has been accessed or the file has been downloaded.</li>
               <li>You are responsible for ensuring your payment information is accurate and that you have sufficient funds to complete the purchase.</li>
             </ul>
@@ -109,7 +109,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-serif font-semibold text-foreground mt-8 mb-3">12. Contact</h2>
             <p className="text-muted-foreground">For questions about these Terms, please contact us at:</p>
-            <p className="text-muted-foreground mt-2"><strong>Email:</strong> legal@lxnuyyhyi.com</p>
+            <p className="text-muted-foreground mt-2"><strong>Email:</strong> us@xiaoheiduo.com</p>
           </section>
         </div>
 

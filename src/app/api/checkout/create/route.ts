@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       category_id: categoryId,
       category_name: category.name,
       amount_cents: actualPrice,
-      stripe_session_id: paypalOrderId, // Reuse field for PayPal order ID
+      stripe_session_id: paypalOrderId, // Stores PayPal order ID
       status: 'pending',
     });
 

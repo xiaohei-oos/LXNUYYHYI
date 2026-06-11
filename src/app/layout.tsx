@@ -78,7 +78,7 @@ export default function RootLayout({
     url: 'https://lxnuyyhyi.com',
     logo: 'https://lxnuyyhyi.com/images/logo.png',
     description: 'Premium vision board image packs for download and printing.',
-    contactEmail: 'support@lxnuyyhyi.com',
+    contactEmail: 'us@xiaoheiduo.com',
     sameAs: [],
   };
 

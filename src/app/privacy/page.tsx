@@ -31,8 +31,8 @@ export default function PrivacyPolicyPage() {
             <p className="text-muted-foreground">LXNUYYHYI (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) collects the following types of information when you use our website and purchase our products:</p>
             <h3 className="text-lg font-semibold text-foreground mt-4 mb-2">1.1 Information You Provide</h3>
             <ul className="list-disc pl-6 text-muted-foreground space-y-1">
-              <li><strong>Payment Information:</strong> When you make a purchase, your payment details (credit card number, billing address) are processed by Stripe, our third-party payment processor. We do not store your full credit card number on our servers.</li>
-              <li><strong>Email Address:</strong> We collect your email address when you complete a purchase, as provided by Stripe checkout. We use this to deliver your download link and order confirmation.</li>
+              <li><strong>Payment Information:</strong> When you make a purchase, your payment details are processed by PayPal, our third-party payment processor. We do not store your full payment information on our servers.</li>
+              <li><strong>Email Address:</strong> We collect your email address when you complete a purchase, as provided by PayPal checkout. We use this to deliver your download link and order confirmation.</li>
               <li><strong>Voluntary Information:</strong> If you contact us via email, we collect the information you provide in your message.</li>
             </ul>
             <h3 className="text-lg font-semibold text-foreground mt-4 mb-2">1.2 Automatically Collected Information</h3>
@@ -57,7 +57,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-serif font-semibold text-foreground mt-8 mb-3">3. Information Sharing</h2>
             <p className="text-muted-foreground">We do not sell, trade, or rent your personal information to third parties. We share information only in the following circumstances:</p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-1">
-              <li><strong>Stripe:</strong> Payment processing is handled by Stripe, Inc., which has its own Privacy Policy available at stripe.com/privacy.</li>
+              <li><strong>PayPal:</strong> Payment processing is handled by PayPal, Inc., which has its own Privacy Policy available at paypal.com/privacy.</li>
               <li><strong>Cloud Storage:</strong> Digital files are stored on secure cloud infrastructure (object storage) for delivery purposes.</li>
               <li><strong>Legal Requirements:</strong> We may disclose information if required by law or to protect our rights and safety.</li>
             </ul>
@@ -103,7 +103,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-serif font-semibold text-foreground mt-8 mb-3">10. Contact Us</h2>
             <p className="text-muted-foreground">If you have any questions about this Privacy Policy or wish to exercise your privacy rights, please contact us at:</p>
-            <p className="text-muted-foreground mt-2"><strong>Email:</strong> privacy@lxnuyyhyi.com</p>
+            <p className="text-muted-foreground mt-2"><strong>Email:</strong> us@xiaoheiduo.com</p>
           </section>
         </div>
 

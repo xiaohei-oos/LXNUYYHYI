@@ -34,11 +34,11 @@ export default function FAQPage() {
     },
     {
       question: 'How do I download my purchase?',
-      answer: 'After successful payment through Stripe, you will be redirected to a confirmation page with a download button. You can also access your download from the order confirmation. The download link is valid for 24 hours and allows up to 3 download attempts. We recommend downloading and saving your files immediately.',
+      answer: 'After successful payment through PayPal, you will be redirected to a confirmation page with a download button. You can also access your download from the order confirmation. The download link is valid for 24 hours and allows up to 3 download attempts. We recommend downloading and saving your files immediately.',
     },
     {
       question: 'What payment methods do you accept?',
-      answer: 'We accept all major credit cards (Visa, Mastercard, American Express, Discover), debit cards, Apple Pay, and Google Pay through our secure payment processor, Stripe. All transactions are encrypted and secure.',
+      answer: 'We accept PayPal, all major credit cards (Visa, Mastercard, American Express, Discover), debit cards, Apple Pay, and Google Pay through our secure payment processor, PayPal. All transactions are encrypted and secure.',
     },
     {
       question: 'Can I get a refund?',
@@ -78,11 +78,11 @@ export default function FAQPage() {
     },
     {
       question: 'Is my payment information secure?',
-      answer: "Absolutely. We use Stripe, one of the world's leading payment processors, to handle all transactions. Your credit card information is encrypted and never stored on our servers. Stripe is PCI-DSS compliant and used by millions of businesses worldwide.",
+      answer: "Absolutely. We use PayPal, one of the world's leading payment processors, to handle all transactions. Your payment information is encrypted and never stored on our servers. PayPal is trusted by millions of businesses worldwide.",
     },
     {
       question: 'How can I contact you?',
-      answer: 'You can reach us by email at support@lxnuyyhyi.com for any questions about your order, technical issues, or general inquiries. We aim to respond within 24-48 hours.',
+      answer: 'You can reach us by email at us@xiaoheiduo.com for any questions about your order, technical issues, or general inquiries. We aim to respond within 24-48 hours.',
     },
   ];
 
@@ -151,7 +151,7 @@ export default function FAQPage() {
           <h3 className="font-serif text-lg font-semibold text-foreground mb-2">Still have questions?</h3>
           <p className="text-muted-foreground mb-4">We&apos;re here to help.</p>
           <a
-            href="mailto:support@lxnuyyhyi.com"
+            href="mailto:us@xiaoheiduo.com"
             className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full font-medium hover:bg-foreground/90 transition-colors"
           >
             Contact Support

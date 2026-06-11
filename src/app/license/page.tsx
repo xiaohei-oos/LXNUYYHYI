@@ -90,7 +90,7 @@ export default function CommercialLicensePage() {
           <section>
             <h2 className="text-xl font-serif font-semibold text-foreground mt-8 mb-3">9. Contact</h2>
             <p className="text-muted-foreground">For questions about this Commercial License, please contact us at:</p>
-            <p className="text-muted-foreground mt-2"><strong>Email:</strong> licensing@lxnuyyhyi.com</p>
+            <p className="text-muted-foreground mt-2"><strong>Email:</strong> us@xiaoheiduo.com</p>
           </section>
         </div>
 

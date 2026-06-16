@@ -70,6 +70,23 @@ export default async function HomePage() {
 
   const cats = (categories || []) as Category[];
 
+  // Fetch latest blog posts for homepage
+  const { data: blogData } = await client
+    .from('blog_posts')
+    .select('id, title, slug, meta_description, cover_image, category, published_at')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(3);
+  const latestPosts = (blogData || []) as {
+    id: string;
+    title: string;
+    slug: string;
+    meta_description: string | null;
+    cover_image: string | null;
+    category: string;
+    published_at: string;
+  }[];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -224,6 +241,54 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* From Our Blog */}
+      {latestPosts.length > 0 && (
+        <section className="bg-white border-t border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-foreground mb-3">From Our Blog</h2>
+              <p className="text-muted-foreground">Tips, guides, and inspiration for your vision board journey.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {latestPosts.map(post => (
+                <Link
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className="group rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                >
+                  <div className="aspect-[16/10] bg-muted overflow-hidden">
+                    {post.cover_image ? (
+                      <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-warm-gold">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-medium text-warm-gold bg-warm-gold/10 px-2 py-0.5 rounded-full capitalize">{post.category}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(post.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <h3 className="font-serif font-semibold text-foreground group-hover:text-warm-gold transition-colors line-clamp-2 mb-1">{post.title}</h3>
+                    {post.meta_description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{post.meta_description}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <Link href="/blog" className="inline-flex items-center gap-1 text-warm-gold hover:underline font-medium text-sm">
+                View All Articles <span aria-hidden="true">&rarr;</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Footer */}
       <footer className="border-t border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -237,6 +302,7 @@ export default async function HomePage() {
               <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
               <Link href="/license" className="hover:text-foreground transition-colors">Commercial License</Link>
               <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+              <Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border text-center text-sm text-muted-foreground">

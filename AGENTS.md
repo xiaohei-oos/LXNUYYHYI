@@ -32,6 +32,9 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 │   │   ├── layout.tsx         # 根布局（LXNUYYHYI品牌）
 │   │   ├── globals.css        # 全局样式（含 Design Tokens）
 │   │   ├── category/[slug]/   # 分类详情页（预览+整包购买）
+│   │   ├── blog/
+│   │   │   ├── page.tsx       # 博客列表页（分类筛选+分页）
+│   │   │   └── [slug]/        # 博客详情页（Markdown渲染+SEO）
 │   │   ├── checkout/
 │   │   │   ├── success/       # 支付成功页（含下载）
 │   │   │   └── cancel/        # 支付取消页
@@ -39,10 +42,12 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 │   │   └── api/
 │   │       ├── categories/    # 分类列表 API
 │   │       ├── images/        # 图片列表 API
+│   │       ├── blog/          # 博客公开 API（列表+详情）
 │   │       ├── checkout/      # 支付创建/验证 API
 │   │       ├── stripe/webhook # Legacy webhook endpoint (PayPal uses capture flow)
 │   │       ├── download/[token] # 安全下载 API
-│   │       └── admin/         # 后台管理 API
+│   │       ├── admin/         # 后台管理 API
+│   │       └── xiaoheiduo9898/ # 后台管理 API（含 blog CRUD）
 │   ├── storage/database/
 │   │   ├── supabase-client.ts # Supabase 客户端
 │   │   └── shared/schema.ts   # Drizzle 数据库 Schema
@@ -60,6 +65,7 @@ LXNUYYHYI - 愿景板图片包付费下载商城。面向美国用户，按分�
 - **categories**: 分类表（= 商品，8 个分类，含价格、ZIP文件Key、中英文名称）
 - **vision_images**: 图片表（属于分类，缩略图URL公开，高清图Key私有）
 - **orders**: 订单表（关联分类包，PayPal Order ID（存于stripe_session_id字段），download_token 一次性下载令牌，24h 过期，最多 3 次下载）
+- **blog_posts**: 博客文章表（SEO文章，含 slug/meta_description/meta_keywords/tags/cover_image/Markdown正文/category/status/author）
 
 ## 中英文分类映射
 

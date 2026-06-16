@@ -37,7 +37,7 @@ interface VisionImage {
   categories?: { name: string; name_cn: string; slug: string };
 }
 
-type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders' | 'dedup';
+type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders' | 'dedup' | 'blog';
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -150,6 +150,7 @@ export default function AdminPage() {
     { key: 'upload', label: '上传图片', icon: '📤' },
     { key: 'dedup', label: '图片去重', icon: '🧹' },
     { key: 'categories', label: '分类管理', icon: '📁' },
+    { key: 'blog', label: '文章管理', icon: '📝' },
     { key: 'orders', label: '订单管理', icon: '📦' },
   ];
 
@@ -282,6 +283,7 @@ export default function AdminPage() {
             {tab === 'dedup' && <DedupTab categories={categories} onRefresh={fetchData} />}
             {tab === 'categories' && <CategoriesTab categories={categories} onRefresh={fetchData} />}
             {tab === 'orders' && <OrdersTab orders={orders} />}
+            {tab === 'blog' && <BlogTab />}
           </>
         )}
       </main>
@@ -531,6 +533,345 @@ function ImagesTab({ images, categories, onRefresh, hasMore, onLoadMore }: { ima
   );
 }
 
+// ============================================================
+// Blog Management Tab
+// ============================================================
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  meta_description: string | null;
+  meta_keywords: string[] | null;
+  cover_image: string | null;
+  content: string;
+  category: string;
+  tags: string[] | null;
+  status: string;
+  author: string;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const BLOG_CATEGORIES = [
+  { value: 'guides', label: '教程指南' },
+  { value: 'tips', label: '技巧方法' },
+  { value: 'inspiration', label: '灵感故事' },
+  { value: 'wealth', label: '财富' },
+  { value: 'travel', label: '旅行' },
+  { value: 'fitness', label: '健身' },
+  { value: 'career', label: '职业' },
+  { value: 'self-love', label: '自爱' },
+  { value: 'family', label: '家庭' },
+  { value: 'home', label: '居家' },
+  { value: 'spiritual', label: '灵性' },
+];
+
+function BlogTab() {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [formTitle, setFormTitle] = useState('');
+  const [formSlug, setFormSlug] = useState('');
+  const [formMetaDescription, setFormMetaDescription] = useState('');
+  const [formMetaKeywords, setFormMetaKeywords] = useState('');
+  const [formCoverImage, setFormCoverImage] = useState('');
+  const [formContent, setFormContent] = useState('');
+  const [formCategory, setFormCategory] = useState('guides');
+  const [formTags, setFormTags] = useState('');
+  const [formStatus, setFormStatus] = useState('draft');
+  const [formAuthor, setFormAuthor] = useState('LXNUYYHYI');
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (filterStatus) params.set('status', filterStatus);
+    params.set('pageSize', '50');
+    const res = await fetch(`/api/xiaoheiduo9898/blog?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      setPosts(data.posts || []);
+      setTotal(data.total || 0);
+    }
+    setLoading(false);
+  }, [filterStatus]);
+
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
+
+  const resetForm = () => {
+    setFormTitle('');
+    setFormSlug('');
+    setFormMetaDescription('');
+    setFormMetaKeywords('');
+    setFormCoverImage('');
+    setFormContent('');
+    setFormCategory('guides');
+    setFormTags('');
+    setFormStatus('draft');
+    setFormAuthor('LXNUYYHYI');
+  };
+
+  const startCreate = () => {
+    resetForm();
+    setEditingPost(null);
+    setIsCreating(true);
+  };
+
+  const startEdit = (post: BlogPost) => {
+    setFormTitle(post.title);
+    setFormSlug(post.slug);
+    setFormMetaDescription(post.meta_description || '');
+    setFormMetaKeywords((post.meta_keywords || []).join(', '));
+    setFormCoverImage(post.cover_image || '');
+    setFormContent(post.content);
+    setFormCategory(post.category);
+    setFormTags((post.tags || []).join(', '));
+    setFormStatus(post.status);
+    setFormAuthor(post.author);
+    setEditingPost(post);
+    setIsCreating(true);
+  };
+
+  const handleSave = async () => {
+    if (!formTitle.trim() || !formSlug.trim()) {
+      alert('标题和 Slug 不能为空');
+      return;
+    }
+    setSaving(true);
+
+    const payload = {
+      title: formTitle.trim(),
+      slug: formSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'),
+      meta_description: formMetaDescription.trim() || null,
+      meta_keywords: formMetaKeywords.split(',').map(k => k.trim()).filter(Boolean),
+      cover_image: formCoverImage.trim() || null,
+      content: formContent,
+      category: formCategory,
+      tags: formTags.split(',').map(t => t.trim()).filter(Boolean),
+      status: formStatus,
+      author: formAuthor.trim() || 'LXNUYYHYI',
+    };
+
+    try {
+      let res: Response;
+      if (editingPost) {
+        res = await fetch(`/api/xiaoheiduo9898/blog/${editingPost.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch('/api/xiaoheiduo9898/blog', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (res.ok) {
+        setIsCreating(false);
+        setEditingPost(null);
+        resetForm();
+        fetchPosts();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Save failed');
+      }
+    } catch {
+      alert('Network error');
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('确定要删除这篇文章吗？')) return;
+    const res = await fetch(`/api/xiaoheiduo9898/blog/${id}`, { method: 'DELETE' });
+    if (res.ok) fetchPosts();
+  };
+
+  const handleTogglePublish = async (post: BlogPost) => {
+    const newStatus = post.status === 'published' ? 'draft' : 'published';
+    const res = await fetch(`/api/xiaoheiduo9898/blog/${post.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) fetchPosts();
+  };
+
+  // Auto-generate slug from title
+  const handleTitleChange = (value: string) => {
+    setFormTitle(value);
+    if (!editingPost) {
+      setFormSlug(value.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-'));
+    }
+  };
+
+  if (isCreating) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">{editingPost ? '编辑文章' : '新建文章'}</h2>
+          <button onClick={() => { setIsCreating(false); setEditingPost(null); }} className="text-sm text-gray-500 hover:text-gray-700">← 返回列表</button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">文章标题 *</label>
+              <input type="text" value={formTitle} onChange={e => handleTitleChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter article title" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">URL Slug *</label>
+              <input type="text" value={formSlug} onChange={e => setFormSlug(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="how-to-create-vision-board" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">文章内容 (Markdown)</label>
+              <textarea value={formContent} onChange={e => setFormContent(e.target.value)} rows={20} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="Write your article content in Markdown..." />
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+              <h3 className="font-medium text-gray-900">发布设置</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                <select value={formStatus} onChange={e => setFormStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="draft">草稿</option>
+                  <option value="published">已发布</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                <select value={formCategory} onChange={e => setFormCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  {BLOG_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">作者</label>
+                <input type="text" value={formAuthor} onChange={e => setFormAuthor(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+              <h3 className="font-medium text-gray-900">SEO 设置</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
+                <textarea value={formMetaDescription} onChange={e => setFormMetaDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="SEO description (max 160 chars)" maxLength={160} />
+                <p className="text-xs text-gray-400 mt-1">{formMetaDescription.length}/160</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Keywords (逗号分隔)</label>
+                <input type="text" value={formMetaKeywords} onChange={e => setFormMetaKeywords(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="vision board, manifestation, law of attraction" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tags (逗号分隔)</label>
+                <input type="text" value={formTags} onChange={e => setFormTags(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="vision board, DIY, print" />
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+              <h3 className="font-medium text-gray-900">封面图片</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">图片 URL</label>
+                <input type="text" value={formCoverImage} onChange={e => setFormCoverImage(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="https://..." />
+              </div>
+              {formCoverImage && (
+                <img src={formCoverImage} alt="Cover preview" className="w-full h-32 object-cover rounded-lg" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              )}
+            </div>
+
+            <button onClick={handleSave} disabled={saving} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              {saving ? '保存中...' : (editingPost ? '更新文章' : '创建文章')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold text-gray-900">文章管理</h2>
+          <span className="text-sm text-gray-500">共 {total} 篇</span>
+        </div>
+        <button onClick={startCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+          + 新建文章
+        </button>
+      </div>
+
+      {/* Filter */}
+      <div className="flex gap-2">
+        <button onClick={() => setFilterStatus('')} className={`px-3 py-1.5 text-sm rounded-lg ${!filterStatus ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>全部</button>
+        <button onClick={() => setFilterStatus('published')} className={`px-3 py-1.5 text-sm rounded-lg ${filterStatus === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>已发布</button>
+        <button onClick={() => setFilterStatus('draft')} className={`px-3 py-1.5 text-sm rounded-lg ${filterStatus === 'draft' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>草稿</button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-gray-500">加载中...</div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">暂无文章，点击「新建文章」开始创作</div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">标题</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">分类</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">状态</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">发布时间</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {posts.map(post => (
+                <tr key={post.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-900 text-sm">{post.title}</div>
+                    <div className="text-xs text-gray-400 font-mono">/blog/{post.slug}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {BLOG_CATEGORIES.find(c => c.value === post.category)?.label || post.category}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full ${
+                      post.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {post.status === 'published' ? '已发布' : '草稿'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {post.published_at ? new Date(post.published_at).toLocaleDateString('zh-CN') : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => handleTogglePublish(post)} className="text-xs px-2 py-1 rounded hover:bg-gray-100 text-gray-600">
+                        {post.status === 'published' ? '取消发布' : '发布'}
+                      </button>
+                      <button onClick={() => startEdit(post)} className="text-xs px-2 py-1 rounded hover:bg-blue-50 text-blue-600">编辑</button>
+                      <button onClick={() => handleDelete(post.id)} className="text-xs px-2 py-1 rounded hover:bg-red-50 text-red-600">删除</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 function UploadTab({ categories, onRefresh }: { categories: Category[]; onRefresh: () => void }) {
   const [selectedCat, setSelectedCat] = useState('');
   const [uploading, setUploading] = useState(false);

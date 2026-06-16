@@ -17,6 +17,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Blog posts
+  const { data: blogPosts } = await client
+    .from('blog_posts')
+    .select('slug, published_at, updated_at')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false });
+
+  const blogEntries: MetadataRoute.Sitemap = (blogPosts || []).map((post: { slug: string; published_at: string; updated_at: string }) => ({
+    url: `${BASE_URL}/blog/${post.slug}`,
+    lastModified: new Date(post.updated_at || post.published_at),
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
   return [
     {
       url: BASE_URL,
@@ -25,6 +39,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     ...categoryEntries,
+    {
+      url: `${BASE_URL}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    ...blogEntries,
     {
       url: `${BASE_URL}/faq`,
       lastModified: new Date(),

@@ -552,6 +552,8 @@ interface BlogPost {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  rejected_reason: string | null;
+  reviewed_at: string | null;
 }
 
 const BLOG_CATEGORIES = [
@@ -576,6 +578,17 @@ function BlogTab() {
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+  // Auto-publish settings
+  const [autoPublishEnabled, setAutoPublishEnabled] = useState(false);
+  const [autoPublishInterval, setAutoPublishInterval] = useState(24);
+  const [autoPublishCount, setAutoPublishCount] = useState(1);
+  const [lastAutoPublishAt, setLastAutoPublishAt] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -604,6 +617,87 @@ function BlogTab() {
   }, [filterStatus]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
+
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
+
+  // Fetch auto-publish settings
+  const fetchSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/blog-settings');
+      if (res.ok) {
+        const data = await res.json();
+        setAutoPublishEnabled(data.auto_publish_enabled ?? false);
+        setAutoPublishInterval(data.auto_publish_interval_hours ?? 24);
+        setAutoPublishCount(data.auto_publish_count ?? 1);
+        setLastAutoPublishAt(data.last_auto_publish_at);
+      }
+    } catch { /* ignore */ }
+    setSettingsLoading(false);
+  }, []);
+
+  // Fetch pending count
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/blog?status=pending&pageSize=1');
+      if (res.ok) {
+        const data = await res.json();
+        setPendingCount(data.total || 0);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchSettings(); fetchPendingCount(); }, [fetchSettings, fetchPendingCount]);
+
+  const handleSaveSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/blog-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auto_publish_enabled: autoPublishEnabled,
+          auto_publish_interval_hours: autoPublishInterval,
+          auto_publish_count: autoPublishCount,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLastAutoPublishAt(data.last_auto_publish_at);
+        alert('设置已保存');
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Save failed');
+      }
+    } catch {
+      alert('Network error');
+    }
+    setSettingsSaving(false);
+  };
+
+  const handleApprove = async (post: BlogPost) => {
+    const res = await fetch(`/api/xiaoheiduo9898/blog/${post.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'published' }),
+    });
+    if (res.ok) { fetchPosts(); fetchPendingCount(); }
+  };
+
+  const handleReject = async (post: BlogPost) => {
+    const reason = rejectReason.trim() || 'Content needs revision';
+    const res = await fetch(`/api/xiaoheiduo9898/blog/${post.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'draft', rejected_reason: reason }),
+    });
+    if (res.ok) {
+      setRejectingId(null);
+      setRejectReason('');
+      fetchPosts();
+      fetchPendingCount();
+    }
+  };
 
   const resetForm = () => {
     setFormTitle('');
@@ -703,7 +797,7 @@ function BlogTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     });
-    if (res.ok) fetchPosts();
+    if (res.ok) { fetchPosts(); fetchPendingCount(); }
   };
 
   // Auto-generate slug from title
@@ -747,6 +841,7 @@ function BlogTab() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
                 <select value={formStatus} onChange={e => setFormStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
                   <option value="draft">草稿</option>
+                  <option value="pending">待审核</option>
                   <option value="published">已发布</option>
                 </select>
               </div>
@@ -814,8 +909,9 @@ function BlogTab() {
       {/* Filter */}
       <div className="flex gap-2">
         <button onClick={() => setFilterStatus('')} className={`px-3 py-1.5 text-sm rounded-lg ${!filterStatus ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>全部</button>
+        <button onClick={() => setFilterStatus('pending')} className={`px-3 py-1.5 text-sm rounded-lg ${filterStatus === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>待审核 {pendingCount > 0 ? `(${pendingCount})` : ''}</button>
         <button onClick={() => setFilterStatus('published')} className={`px-3 py-1.5 text-sm rounded-lg ${filterStatus === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>已发布</button>
-        <button onClick={() => setFilterStatus('draft')} className={`px-3 py-1.5 text-sm rounded-lg ${filterStatus === 'draft' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>草稿</button>
+        <button onClick={() => setFilterStatus('draft')} className={`px-3 py-1.5 text-sm rounded-lg ${filterStatus === 'draft' ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>草稿</button>
       </div>
 
       {loading ? (
@@ -846,19 +942,39 @@ function BlogTab() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full ${
-                      post.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      post.status === 'published' ? 'bg-green-100 text-green-700' :
+                      post.status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                      'bg-gray-100 text-gray-600'
                     }`}>
-                      {post.status === 'published' ? '已发布' : '草稿'}
+                      {post.status === 'published' ? '已发布' : post.status === 'pending' ? '待审核' : '草稿'}
                     </span>
+                    {post.rejected_reason && post.status === 'draft' && (
+                      <div className="text-xs text-red-500 mt-1" title={post.rejected_reason}>退回: {post.rejected_reason.slice(0, 30)}{post.rejected_reason.length > 30 ? '...' : ''}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {post.published_at ? new Date(post.published_at).toLocaleDateString('zh-CN') : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleTogglePublish(post)} className="text-xs px-2 py-1 rounded hover:bg-gray-100 text-gray-600">
-                        {post.status === 'published' ? '取消发布' : '发布'}
-                      </button>
+                      {post.status === 'pending' ? (
+                        <>
+                          <button onClick={() => handleApprove(post)} className="text-xs px-2 py-1 rounded bg-green-50 text-green-600 hover:bg-green-100">通过</button>
+                          {rejectingId === post.id ? (
+                            <div className="flex items-center gap-1">
+                              <input type="text" value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="退回原因..." className="text-xs px-2 py-1 border rounded w-28" />
+                              <button onClick={() => handleReject(post)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100">确认</button>
+                              <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="text-xs px-1 py-1 text-gray-400 hover:text-gray-600">X</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setRejectingId(post.id)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100">退回</button>
+                          )}
+                        </>
+                      ) : (
+                        <button onClick={() => handleTogglePublish(post)} className="text-xs px-2 py-1 rounded hover:bg-gray-100 text-gray-600">
+                          {post.status === 'published' ? '取消发布' : '发布'}
+                        </button>
+                      )}
                       <button onClick={() => startEdit(post)} className="text-xs px-2 py-1 rounded hover:bg-blue-50 text-blue-600">编辑</button>
                       <button onClick={() => handleDelete(post.id)} className="text-xs px-2 py-1 rounded hover:bg-red-50 text-red-600">删除</button>
                     </div>
@@ -869,6 +985,35 @@ function BlogTab() {
           </table>
         </div>
       )}
+
+      {/* Auto Publish Settings */}
+      <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+        <h4 className="font-medium text-gray-700 mb-3">定时自动发布设置</h4>
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={autoPublishEnabled} onChange={e => setAutoPublishEnabled(e.target.checked)} className="rounded" />
+            <span className="text-sm">启用自动发布</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            每隔
+            <input type="number" min="1" max="720" value={autoPublishInterval} onChange={e => setAutoPublishInterval(Number(e.target.value))} className="w-16 px-2 py-1 border rounded text-center" />
+            小时
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            每次发布
+            <input type="number" min="1" max="10" value={autoPublishCount} onChange={e => setAutoPublishCount(Number(e.target.value))} className="w-16 px-2 py-1 border rounded text-center" />
+            篇
+          </label>
+          <button onClick={handleSaveSettings} disabled={settingsSaving} className="px-3 py-1 bg-[#1A1A1A] text-white text-sm rounded hover:bg-gray-800 disabled:opacity-50">
+            {settingsSaving ? '保存中...' : '保存设置'}
+          </button>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          {lastAutoPublishAt ? `上次自动发布: ${new Date(lastAutoPublishAt).toLocaleString('zh-CN')}` : '尚未自动发布过'}
+          {' | '}
+          待审核文章: {posts.filter(p => p.status === 'pending').length} 篇
+        </div>
+      </div>
     </div>
   );
 }

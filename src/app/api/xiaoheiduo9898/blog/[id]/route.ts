@@ -79,6 +79,14 @@ export async function PUT(
   // Set published_at when publishing for the first time
   if (status === 'published' && current.status !== 'published') {
     updateData.published_at = new Date().toISOString();
+    updateData.reviewed_at = new Date().toISOString();
+    updateData.rejected_reason = null;
+  }
+
+  // Set reviewed_at when rejecting (changing to draft with a reason)
+  if (status === 'draft' && body.rejected_reason) {
+    updateData.rejected_reason = body.rejected_reason;
+    updateData.reviewed_at = new Date().toISOString();
   }
 
   const { data, error } = await supabase

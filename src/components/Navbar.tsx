@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 const NAV_LINKS = [
@@ -12,6 +13,12 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Hide navbar on admin and checkout pages
+  if (pathname.startsWith('/xiaoheiduo9898') || pathname.startsWith('/checkout')) {
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">

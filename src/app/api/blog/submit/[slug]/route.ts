@@ -11,6 +11,47 @@ function toArray(value: unknown): string[] | null {
   return null;
 }
 
+// Convert HTML content to Markdown for react-markdown rendering
+function htmlToMarkdown(html: string): string {
+  if (!/<[a-z][\s\S]*?>/i.test(html)) return html;
+
+  let md = html;
+
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+  md = md.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n');
+  md = md.replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n');
+  md = md.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n');
+  md = md.replace(/<(strong|b)[^>]*>(.*?)<\/\1>/gi, '**$2**');
+  md = md.replace(/<(em|i)[^>]*>(.*?)<\/\1>/gi, '*$2*');
+  md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+  md = md.replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, '![$2]($1)');
+  md = md.replace(/<img[^>]*src="([^"]*)"[^>]*\/?>/gi, '![]($1)');
+  md = md.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, content: string) => {
+    return content.trim().split('\n').map((line: string) => `> ${line}`).join('\n') + '\n\n';
+  });
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+  md = md.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, (_match, content: string) => {
+    let idx = 0;
+    return content.replace(/- (.*?)\n/g, () => `${++idx}. ${content}\n`);
+  });
+  md = md.replace(/<\/?(ul|ol|li)[^>]*>/gi, '');
+  md = md.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+  md = md.replace(/<br\s*\/?>/gi, '\n');
+  md = md.replace(/<hr\s*\/?>/gi, '\n---\n\n');
+  md = md.replace(/<\/?[a-z][^>]*>/gi, '');
+  md = md.replace(/&amp;/g, '&');
+  md = md.replace(/&lt;/g, '<');
+  md = md.replace(/&gt;/g, '>');
+  md = md.replace(/&quot;/g, '"');
+  md = md.replace(/&#39;/g, "'");
+  md = md.replace(/&nbsp;/g, ' ');
+  md = md.replace(/\n{3,}/g, '\n\n');
+
+  return md.trim();
+}
+
 // Validate API key from Authorization header against database + env fallback
 async function validateApiKey(request: NextRequest): Promise<NextResponse | null> {
   const authHeader = request.headers.get('Authorization');
@@ -102,6 +143,10 @@ export async function PUT(
     }
     if (updateData.meta_keywords !== undefined) {
       updateData.meta_keywords = toArray(updateData.meta_keywords);
+    }
+    // Convert HTML content to Markdown
+    if (updateData.content !== undefined && typeof updateData.content === 'string') {
+      updateData.content = htmlToMarkdown(updateData.content);
     }
     // Convert empty cover_image string to null
     if (updateData.cover_image === '') {

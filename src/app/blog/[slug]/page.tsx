@@ -20,6 +20,24 @@ interface BlogPost {
   updated_at: string;
 }
 
+const BLOG_COVER_FALLBACKS = [
+  '/blog-covers/blog-cover-1.png',
+  '/blog-covers/blog-cover-2.png',
+  '/blog-covers/blog-cover-3.png',
+  '/blog-covers/blog-cover-4.png',
+];
+
+function getBlogCover(coverImage: string | null, slug: string): string {
+  if (coverImage) return coverImage;
+  // Deterministic selection based on slug so same post always shows same cover
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash << 5) - hash) + slug.charCodeAt(i);
+    hash |= 0;
+  }
+  return BLOG_COVER_FALLBACKS[Math.abs(hash) % BLOG_COVER_FALLBACKS.length];
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   guides: 'Guides',
   tips: 'Tips & Tricks',
@@ -56,6 +74,8 @@ export async function generateMetadata({
     return { title: 'Post Not Found | LXNUYYHYI' };
   }
 
+  const coverUrl = getBlogCover(post.cover_image, slug);
+
   return {
     title: `${post.title} | LXNUYYHYI Blog`,
     description: post.meta_description || `${post.title} - Read more on the LXNUYYHYI blog.`,
@@ -70,7 +90,7 @@ export async function generateMetadata({
       type: 'article',
       publishedTime: undefined,
       authors: ['LXNUYYHYI'],
-      images: post.cover_image ? [{ url: post.cover_image, width: 1200, height: 630 }] : [],
+      images: [{ url: coverUrl, width: 1200, height: 630 }],
     },
   };
 }
@@ -82,7 +102,7 @@ function generateJsonLd(post: BlogPost) {
     '@type': 'Article',
     headline: post.title,
     description: post.meta_description || '',
-    image: post.cover_image || '',
+    image: getBlogCover(post.cover_image, post.slug),
     author: {
       '@type': 'Organization',
       name: 'LXNUYYHYI',
@@ -182,15 +202,13 @@ export default async function BlogPostPage({
           </header>
 
           {/* Cover Image */}
-          {post.cover_image && (
-            <div className="aspect-[21/9] rounded-2xl overflow-hidden mb-10">
-              <img
-                src={post.cover_image}
-                alt={post.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+          <div className="aspect-[21/9] rounded-2xl overflow-hidden mb-10">
+            <img
+              src={getBlogCover(post.cover_image, post.slug)}
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
           {/* Content */}
           <BlogPostContent content={post.content} />
@@ -244,11 +262,7 @@ export default async function BlogPostPage({
                     className="group rounded-xl overflow-hidden border border-[#E8E6E1] hover:shadow-md transition-all"
                   >
                     <div className="aspect-[16/10] bg-[#E8E6E1] overflow-hidden">
-                      {rp.cover_image ? (
-                        <img src={rp.cover_image} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      ) : (
-                        <div className="w-full h-full bg-[#E8E6E1]" />
-                      )}
+                      <img src={getBlogCover(rp.cover_image, rp.slug)} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
                     <div className="p-4">
                       <h3 className="font-[family-name:var(--font-playfair)] font-semibold text-[#1A1A1A] group-hover:text-[#C8956C] transition-colors line-clamp-2">

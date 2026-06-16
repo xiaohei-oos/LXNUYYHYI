@@ -11,6 +11,75 @@ function toArray(value: unknown): string[] | null {
   return null;
 }
 
+// Convert HTML content to Markdown for react-markdown rendering
+function htmlToMarkdown(html: string): string {
+  // Already looks like Markdown (no HTML tags) - return as-is
+  if (!/<[a-z][\s\S]*?>/i.test(html)) return html;
+
+  let md = html;
+
+  // Headings
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+  md = md.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n');
+  md = md.replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n');
+  md = md.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n');
+
+  // Bold & italic
+  md = md.replace(/<(strong|b)[^>]*>(.*?)<\/\1>/gi, '**$2**');
+  md = md.replace(/<(em|i)[^>]*>(.*?)<\/\1>/gi, '*$2*');
+
+  // Links
+  md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+
+  // Images
+  md = md.replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, '![$2]($1)');
+  md = md.replace(/<img[^>]*src="([^"]*)"[^>]*\/?>/gi, '![]($1)');
+
+  // Blockquotes
+  md = md.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, content: string) => {
+    return content.trim().split('\n').map((line: string) => `> ${line}`).join('\n') + '\n\n';
+  });
+
+  // Unordered lists
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+
+  // Ordered lists - convert li items to numbered
+  md = md.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, (_match, content: string) => {
+    let idx = 0;
+    return content.replace(/- (.*?)\n/g, () => `${++idx}. ${content}\n`);
+  });
+
+  // Remove remaining list tags
+  md = md.replace(/<\/?(ul|ol|li)[^>]*>/gi, '');
+
+  // Paragraphs
+  md = md.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+
+  // Line breaks
+  md = md.replace(/<br\s*\/?>/gi, '\n');
+
+  // Horizontal rules
+  md = md.replace(/<hr\s*\/?>/gi, '\n---\n\n');
+
+  // Remove any remaining HTML tags
+  md = md.replace(/<\/?[a-z][^>]*>/gi, '');
+
+  // Decode common HTML entities
+  md = md.replace(/&amp;/g, '&');
+  md = md.replace(/&lt;/g, '<');
+  md = md.replace(/&gt;/g, '>');
+  md = md.replace(/&quot;/g, '"');
+  md = md.replace(/&#39;/g, "'");
+  md = md.replace(/&nbsp;/g, ' ');
+
+  // Clean up excessive newlines
+  md = md.replace(/\n{3,}/g, '\n\n');
+
+  return md.trim();
+}
+
 // Validate API key from Authorization header against database + env fallback
 async function validateApiKey(request: NextRequest): Promise<NextResponse | null> {
   const authHeader = request.headers.get('Authorization');
@@ -102,7 +171,7 @@ export async function POST(request: NextRequest) {
     const insertData: Record<string, unknown> = {
       title,
       slug,
-      content,
+      content: htmlToMarkdown(content),
       status: 'pending',
       meta_description: meta_description || null,
       meta_keywords: toArray(meta_keywords),

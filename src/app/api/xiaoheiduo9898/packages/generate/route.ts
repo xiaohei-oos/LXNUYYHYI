@@ -73,8 +73,8 @@ async function generateZipBuffer(
 
 export async function POST(request: Request) {
   try {
-    const { requireAdminRequest } = await import('../../_auth');
-    const authError = requireAdminRequest(request);
+    const { requireAdmin } = await import('../../_auth');
+    const authError = requireAdmin(request as any);
     if (authError) return authError;
 
     const body = await request.json();

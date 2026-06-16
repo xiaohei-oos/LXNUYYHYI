@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 const ADMIN_USERNAME = 'xysales';
+
+// Active sessions stored in memory (resets on server restart)
+const activeSessions = new Map<string, { createdAt: number }>();
+
+// Export for use in _auth.ts
+export function isValidSession(token: string): boolean {
+  const session = activeSessions.get(token);
+  if (!session) return false;
+  // Session expires after 24 hours
+  if (Date.now() - session.createdAt > 24 * 60 * 60 * 1000) {
+    activeSessions.delete(token);
+    return false;
+  }
+  return true;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,18 +30,11 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     if (username === ADMIN_USERNAME && password === adminPassword) {
-      const response = NextResponse.json({ success: true });
+      // Generate a random session token
+      const token = crypto.randomBytes(32).toString('hex');
+      activeSessions.set(token, { createdAt: Date.now() });
 
-      // Set a secure HTTP-only cookie
-      response.cookies.set('admin_session', 'authenticated', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24, // 24 hours
-        path: '/',
-      });
-
-      return response;
+      return NextResponse.json({ success: true, token });
     }
 
     return NextResponse.json(
@@ -40,14 +49,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
-  const response = NextResponse.json({ success: true });
-  response.cookies.set('admin_session', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/',
-  });
-  return response;
+export async function DELETE(request: NextRequest) {
+  const token = request.headers.get('x-admin-token');
+  if (token) {
+    activeSessions.delete(token);
+  }
+  return NextResponse.json({ success: true });
 }

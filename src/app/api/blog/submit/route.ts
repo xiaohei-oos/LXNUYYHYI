@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
+// Convert string or array to text[] for PostgreSQL compatibility
+function toArray(value: unknown): string[] | null {
+  if (!value) return null;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') {
+    return value.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return null;
+}
+
 // Validate API key from Authorization header against database + env fallback
 async function validateApiKey(request: NextRequest): Promise<NextResponse | null> {
   const authHeader = request.headers.get('Authorization');
@@ -95,9 +105,9 @@ export async function POST(request: NextRequest) {
       content,
       status: 'pending',
       meta_description: meta_description || null,
-      meta_keywords: meta_keywords || null,
+      meta_keywords: toArray(meta_keywords),
       category: category || 'guides',
-      tags: tags || [],
+      tags: toArray(tags) || [],
       cover_image: cover_image || null,
       author: author || 'LXNUYYHYI',
     };

@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
+// Convert string or array to text[] for PostgreSQL compatibility
+function toArray(value: unknown): string[] | null {
+  if (!value) return null;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') {
+    return value.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return null;
+}
+
 // Validate API key from Authorization header against database + env fallback
 async function validateApiKey(request: NextRequest): Promise<NextResponse | null> {
   const authHeader = request.headers.get('Authorization');
@@ -84,6 +94,18 @@ export async function PUT(
       if (body[field] !== undefined) {
         updateData[field] = body[field];
       }
+    }
+
+    // Convert tags and meta_keywords to arrays (compatible with string or array input)
+    if (updateData.tags !== undefined) {
+      updateData.tags = toArray(updateData.tags) || [];
+    }
+    if (updateData.meta_keywords !== undefined) {
+      updateData.meta_keywords = toArray(updateData.meta_keywords);
+    }
+    // Convert empty cover_image string to null
+    if (updateData.cover_image === '') {
+      updateData.cover_image = null;
     }
 
     // If post was previously rejected (draft with rejected_reason), reset to pending on re-submit

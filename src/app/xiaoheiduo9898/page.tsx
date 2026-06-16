@@ -755,15 +755,18 @@ function ApiKeysTab() {
               {copied ? '已复制!' : '复制'}
             </button>
           </div>
-          <div className="mt-3 text-xs text-gray-600">
-            <p>接口地址：</p>
-            <code className="bg-white border rounded px-2 py-1 block mt-1">
-              POST /api/blog/submit (提交新文章)
+          <div className="mt-3 text-xs text-gray-600 space-y-1">
+            <p><strong>接口地址：</strong></p>
+            <code className="bg-white border rounded px-2 py-1 block">
+              POST https://www.lxnuyyhyi.com/api/blog/submit (提交新文章)
             </code>
-            <code className="bg-white border rounded px-2 py-1 block mt-1">
-              PUT /api/blog/submit/[slug] (更新文章)
+            <code className="bg-white border rounded px-2 py-1 block">
+              PUT https://www.lxnuyyhyi.com/api/blog/submit/[slug] (更新文章)
             </code>
-            <p className="mt-1">Header: <code className="bg-white border rounded px-1">Authorization: Bearer {createdKey.slice(0, 12)}...</code></p>
+            <p className="mt-2"><strong>请求头：</strong></p>
+            <code className="bg-white border rounded px-2 py-1 block break-all">
+              Authorization: Bearer {createdKey}
+            </code>
           </div>
         </div>
       )}
@@ -843,16 +846,18 @@ function ApiKeysTab() {
           <div>
             <strong>提交新文章：</strong>
             <code className="block bg-white border rounded px-3 py-2 mt-1 text-xs">
-              POST /api/blog/submit<br />
+              POST https://www.lxnuyyhyi.com/api/blog/submit<br />
               Headers: Authorization: Bearer sk-blog-xxxx...<br />
+              Content-Type: application/json<br />
               Body: {'{'} "title": "...", "slug": "...", "content": "Markdown...", "category": "guides", "tags": ["vision board"], "meta_description": "...", "meta_keywords": ["..."], "cover_image": "https://...", "author": "LXNUYYHYI" {'}'}
             </code>
           </div>
           <div>
             <strong>更新已有文章：</strong>
             <code className="block bg-white border rounded px-3 py-2 mt-1 text-xs">
-              PUT /api/blog/submit/[slug]<br />
+              PUT https://www.lxnuyyhyi.com/api/blog/submit/[slug]<br />
               Headers: Authorization: Bearer sk-blog-xxxx...<br />
+              Content-Type: application/json<br />
               Body: {'{'} "title": "...", "content": "..." {'}'}  (只传需要更新的字段)
             </code>
           </div>

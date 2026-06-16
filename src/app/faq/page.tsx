@@ -110,14 +110,6 @@ export default function FAQPage() {
         }}
       />
 
-      <nav className="border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/" className="text-xl font-serif font-bold tracking-wider text-foreground">
-            LXNUYYHYI
-          </Link>
-        </div>
-      </nav>
-
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground mb-2">Frequently Asked Questions</h1>
         <p className="text-muted-foreground mb-10">Everything you need to know about LXNUYYHYI vision board image packs.</p>

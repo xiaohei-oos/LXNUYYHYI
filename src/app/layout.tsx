@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import Navbar from '@/components/Navbar';
 import './globals.css';
 
 const GA_TRACKING_ID = 'G-RKDJXC4FKF';
@@ -124,6 +125,7 @@ export default function RootLayout({
             __html: JSON.stringify(websiteSchema),
           }}
         />
+        <Navbar />
         {children}
       </body>
     </html>

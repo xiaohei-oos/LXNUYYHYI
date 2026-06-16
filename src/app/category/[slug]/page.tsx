@@ -299,22 +299,6 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         }}
       />
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-serif font-bold tracking-wider text-foreground">
-                LXNUYYHYI
-              </span>
-            </Link>
-            <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              All Collections
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

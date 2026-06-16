@@ -37,7 +37,7 @@ interface VisionImage {
   categories?: { name: string; name_cn: string; slug: string };
 }
 
-type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders' | 'dedup' | 'blog';
+type Tab = 'dashboard' | 'images' | 'upload' | 'categories' | 'orders' | 'dedup' | 'blog' | 'api-keys';
 
 // Module-level auth helpers (accessible by all inner components)
 const getAuthToken = () => {
@@ -176,6 +176,7 @@ export default function AdminPage() {
     { key: 'dedup', label: '图片去重', icon: '🧹' },
     { key: 'categories', label: '分类管理', icon: '📁' },
     { key: 'blog', label: '文章管理', icon: '📝' },
+    { key: 'api-keys', label: 'API密钥', icon: '🔑' },
     { key: 'orders', label: '订单管理', icon: '📦' },
   ];
 
@@ -309,6 +310,7 @@ export default function AdminPage() {
             {tab === 'categories' && <CategoriesTab categories={categories} onRefresh={fetchData} />}
             {tab === 'orders' && <OrdersTab orders={orders} />}
             {tab === 'blog' && <BlogTab />}
+            {tab === 'api-keys' && <ApiKeysTab />}
           </>
         )}
       </main>
@@ -594,6 +596,272 @@ const BLOG_CATEGORIES = [
   { value: 'home', label: '居家' },
   { value: 'spiritual', label: '灵性' },
 ];
+
+interface ApiKeyRecord {
+  id: string;
+  name: string;
+  api_key_masked: string;
+  is_active: boolean;
+  usage_count: number;
+  last_used_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+function ApiKeysTab() {
+  const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyNotes, setNewKeyNotes] = useState('');
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const fetchKeys = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/blog-api-keys', { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setKeys(data.keys || []);
+      }
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchKeys(); }, [fetchKeys]);
+
+  const handleCreate = async () => {
+    if (!newKeyName.trim()) {
+      alert('请输入密钥名称');
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/blog-api-keys', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ name: newKeyName.trim(), notes: newKeyNotes.trim() || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCreatedKey(data.api_key);
+        setNewKeyName('');
+        setNewKeyNotes('');
+        fetchKeys();
+      } else {
+        const data = await res.json();
+        alert(data.error || '创建失败');
+      }
+    } catch {
+      alert('网络错误');
+    }
+    setCreating(false);
+  };
+
+  const handleToggle = async (id: string, isActive: boolean) => {
+    try {
+      const res = await fetch('/api/xiaoheiduo9898/blog-api-keys', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ id, is_active: !isActive }),
+      });
+      if (res.ok) fetchKeys();
+    } catch { /* ignore */ }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('确定要删除这个 API 密钥吗？删除后使用此密钥的程序将无法提交文章。')) return;
+    try {
+      const res = await fetch(`/api/xiaoheiduo9898/blog-api-keys?id=${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (res.ok) fetchKeys();
+    } catch { /* ignore */ }
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">API 密钥管理</h2>
+          <p className="text-sm text-gray-500 mt-1">管理用于博客文章提交接口的 API 密钥，外部写作程序可使用这些密钥提交文章。</p>
+        </div>
+      </div>
+
+      {/* Create new key */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h3 className="font-medium text-gray-900 mb-3">创建新密钥</h3>
+        <div className="flex gap-3 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">密钥名称 *</label>
+            <input
+              type="text"
+              value={newKeyName}
+              onChange={e => setNewKeyName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              placeholder="例如：SEO写作工具、自动化程序"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <input
+              type="text"
+              value={newKeyNotes}
+              onChange={e => setNewKeyNotes(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              placeholder="可选备注"
+            />
+          </div>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="px-4 py-2 bg-[#1A1A1A] text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            {creating ? '创建中...' : '创建密钥'}
+          </button>
+        </div>
+      </div>
+
+      {/* Show newly created key (only shown once) */}
+      {createdKey && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-medium text-green-800">密钥创建成功！</h4>
+            <button
+              onClick={() => setCreatedKey(null)}
+              className="text-green-600 hover:text-green-800 text-sm"
+            >
+              关闭
+            </button>
+          </div>
+          <p className="text-sm text-green-700 mb-2">请立即复制此密钥，关闭后将无法再次查看完整密钥。</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 bg-white border border-green-300 rounded px-3 py-2 text-sm font-mono break-all">
+              {createdKey}
+            </code>
+            <button
+              onClick={() => handleCopy(createdKey)}
+              className="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+            >
+              {copied ? '已复制!' : '复制'}
+            </button>
+          </div>
+          <div className="mt-3 text-xs text-gray-600">
+            <p>接口地址：</p>
+            <code className="bg-white border rounded px-2 py-1 block mt-1">
+              POST /api/blog/submit (提交新文章)
+            </code>
+            <code className="bg-white border rounded px-2 py-1 block mt-1">
+              PUT /api/blog/submit/[slug] (更新文章)
+            </code>
+            <p className="mt-1">Header: <code className="bg-white border rounded px-1">Authorization: Bearer {createdKey.slice(0, 12)}...</code></p>
+          </div>
+        </div>
+      )}
+
+      {/* Keys list */}
+      {loading ? (
+        <div className="text-center py-8 text-gray-500">加载中...</div>
+      ) : keys.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">暂无 API 密钥，点击上方「创建密钥」开始</div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">名称</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">密钥</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">状态</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">使用次数</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">最后使用</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">备注</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {keys.map(key => (
+                <tr key={key.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-900 text-sm">{key.name}</div>
+                    <div className="text-xs text-gray-400">{new Date(key.created_at).toLocaleDateString('zh-CN')}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{key.api_key_masked}</code>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full ${
+                      key.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {key.is_active ? '启用' : '已禁用'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{key.usage_count || 0}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {key.last_used_at ? new Date(key.last_used_at).toLocaleString('zh-CN') : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500 max-w-[150px] truncate">{key.notes || '-'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleToggle(key.id, key.is_active)}
+                        className={`text-xs px-2 py-1 rounded ${
+                          key.is_active
+                            ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                            : 'bg-green-50 text-green-600 hover:bg-green-100'
+                        }`}
+                      >
+                        {key.is_active ? '禁用' : '启用'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(key.id)}
+                        className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Usage guide */}
+      <div className="bg-gray-50 rounded-lg border p-4">
+        <h4 className="font-medium text-gray-700 mb-2">接口使用说明</h4>
+        <div className="space-y-2 text-sm text-gray-600">
+          <div>
+            <strong>提交新文章：</strong>
+            <code className="block bg-white border rounded px-3 py-2 mt-1 text-xs">
+              POST /api/blog/submit<br />
+              Headers: Authorization: Bearer sk-blog-xxxx...<br />
+              Body: {'{'} "title": "...", "slug": "...", "content": "Markdown...", "category": "guides", "tags": ["vision board"], "meta_description": "...", "meta_keywords": ["..."], "cover_image": "https://...", "author": "LXNUYYHYI" {'}'}
+            </code>
+          </div>
+          <div>
+            <strong>更新已有文章：</strong>
+            <code className="block bg-white border rounded px-3 py-2 mt-1 text-xs">
+              PUT /api/blog/submit/[slug]<br />
+              Headers: Authorization: Bearer sk-blog-xxxx...<br />
+              Body: {'{'} "title": "...", "content": "..." {'}'}  (只传需要更新的字段)
+            </code>
+          </div>
+          <p className="text-xs text-gray-500">提交的文章默认状态为「待审核」，需后台审核通过后才会发布。如果启用了自动发布，将按设定间隔自动发布。</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BlogTab() {
   const [posts, setPosts] = useState<BlogPost[]>([]);

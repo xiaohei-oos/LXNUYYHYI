@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// Validate BLOG_API_KEY from Authorization header
-function validateApiKey(request: NextRequest): NextResponse | null {
-  const apiKey = process.env.BLOG_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'BLOG_API_KEY not configured on server' }, { status: 500 });
-  }
-
+// Validate API key from Authorization header against database + env fallback
+async function validateApiKey(request: NextRequest): Promise<NextResponse | null> {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader) {
     return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
@@ -18,17 +13,44 @@ function validateApiKey(request: NextRequest): NextResponse | null {
     return NextResponse.json({ error: 'Invalid Authorization format. Use: Bearer <api-key>' }, { status: 401 });
   }
 
-  if (match[1] !== apiKey) {
-    return NextResponse.json({ error: 'Invalid API key' }, { status: 403 });
+  const providedKey = match[1];
+
+  // 1. Check against database keys first
+  const supabase = getSupabaseClient();
+  const { data: keyRecord, error } = await supabase
+    .from('blog_api_keys')
+    .select('id, is_active, usage_count')
+    .eq('api_key', providedKey)
+    .eq('is_active', true)
+    .single();
+
+  if (!error && keyRecord) {
+    // Update usage stats asynchronously (don't block the request)
+    supabase
+      .from('blog_api_keys')
+      .update({
+        usage_count: (keyRecord.usage_count || 0) + 1,
+        last_used_at: new Date().toISOString(),
+      })
+      .eq('id', keyRecord.id)
+      .then(() => {}); // fire and forget
+
+    return null; // valid
   }
 
-  return null; // valid
+  // 2. Fallback: check environment variable BLOG_API_KEY for backward compatibility
+  const envApiKey = process.env.BLOG_API_KEY;
+  if (envApiKey && providedKey === envApiKey) {
+    return null; // valid
+  }
+
+  return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 403 });
 }
 
 // POST /api/blog/submit - Submit a new blog post (status = pending)
 export async function POST(request: NextRequest) {
   // Validate API key
-  const authError = validateApiKey(request);
+  const authError = await validateApiKey(request);
   if (authError) return authError;
 
   try {

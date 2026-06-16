@@ -58,7 +58,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/xiaoheiduo9898/stats', { method: 'GET' }).then(res => {
+    fetch('/api/xiaoheiduo9898/stats', { method: 'GET', credentials: 'include' }).then(res => {
       setAuthenticated(res.ok);
       setAuthChecking(false);
     }).catch(() => {
@@ -75,6 +75,7 @@ export default function AdminPage() {
       const res = await fetch('/api/xiaoheiduo9898/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username: loginUser, password: loginPass }),
       });
       const data = await res.json();
@@ -91,7 +92,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/xiaoheiduo9898/login', { method: 'DELETE' });
+    await fetch('/api/xiaoheiduo9898/login', { method: 'DELETE', credentials: 'include' });
     setAuthenticated(false);
   };
 
@@ -100,10 +101,10 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [catRes, orderRes, imgRes, statsRes] = await Promise.all([
-        fetch('/api/xiaoheiduo9898/categories'),
-        fetch('/api/xiaoheiduo9898/orders'),
-        fetch(`/api/xiaoheiduo9898/images?limit=${IMAGES_PAGE_SIZE}&offset=0`),
-        fetch('/api/xiaoheiduo9898/stats'),
+        fetch('/api/xiaoheiduo9898/categories', { credentials: 'include' }),
+        fetch('/api/xiaoheiduo9898/orders', { credentials: 'include' }),
+        fetch(`/api/xiaoheiduo9898/images?limit=${IMAGES_PAGE_SIZE}&offset=0`, { credentials: 'include' }),
+        fetch('/api/xiaoheiduo9898/stats', { credentials: 'include' }),
       ]);
       if (catRes.ok) setCategories((await catRes.json()).categories);
       if (orderRes.ok) setOrders((await orderRes.json()).orders);
@@ -253,7 +254,7 @@ export default function AdminPage() {
             {tab === 'images' && <ImagesTab images={images} categories={categories} onRefresh={fetchData} hasMore={imagesHasMore} onLoadMore={async () => {
               const nextPage = imagesPage + 1;
               const offset = nextPage * IMAGES_PAGE_SIZE;
-              const res = await fetch(`/api/xiaoheiduo9898/images?limit=${IMAGES_PAGE_SIZE}&offset=${offset}`);
+              const res = await fetch(`/api/xiaoheiduo9898/images?limit=${IMAGES_PAGE_SIZE}&offset=${offset}`, { credentials: 'include' });
               if (res.ok) {
                 const data = await res.json();
                 const newImgs = data.images as VisionImage[];
@@ -372,7 +373,7 @@ function ImagesTab({ images, categories, onRefresh, hasMore, onLoadMore }: { ima
 
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除这张图片吗？')) return;
-    const res = await fetch(`/api/xiaoheiduo9898/images?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/xiaoheiduo9898/images?id=${id}`, { method: 'DELETE', credentials: 'include' });
     if (res.ok) onRefresh();
     else alert('删除失败');
   };
@@ -401,7 +402,7 @@ function ImagesTab({ images, categories, onRefresh, hasMore, onLoadMore }: { ima
     setBatchDeleting(true);
     try {
       const ids = Array.from(selectedIds).join(',');
-      const res = await fetch(`/api/xiaoheiduo9898/images?ids=${ids}`, { method: 'DELETE' });
+      const res = await fetch(`/api/xiaoheiduo9898/images?ids=${ids}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         alert(data.message || `已删除 ${selectedIds.size} 张图片`);
@@ -607,7 +608,7 @@ function BlogTab() {
     const params = new URLSearchParams();
     if (filterStatus) params.set('status', filterStatus);
     params.set('pageSize', '50');
-    const res = await fetch(`/api/xiaoheiduo9898/blog?${params}`);
+    const res = await fetch(`/api/xiaoheiduo9898/blog?${params}`, { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
       setPosts(data.posts || []);
@@ -624,7 +625,7 @@ function BlogTab() {
   const fetchSettings = useCallback(async () => {
     setSettingsLoading(true);
     try {
-      const res = await fetch('/api/xiaoheiduo9898/blog-settings');
+      const res = await fetch('/api/xiaoheiduo9898/blog-settings', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setAutoPublishEnabled(data.auto_publish_enabled ?? false);
@@ -639,7 +640,7 @@ function BlogTab() {
   // Fetch pending count
   const fetchPendingCount = useCallback(async () => {
     try {
-      const res = await fetch('/api/xiaoheiduo9898/blog?status=pending&pageSize=1');
+      const res = await fetch('/api/xiaoheiduo9898/blog?status=pending&pageSize=1', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setPendingCount(data.total || 0);
@@ -655,6 +656,7 @@ function BlogTab() {
       const res = await fetch('/api/xiaoheiduo9898/blog-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           auto_publish_enabled: autoPublishEnabled,
           auto_publish_interval_hours: autoPublishInterval,
@@ -680,6 +682,7 @@ function BlogTab() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'published' }),
+      credentials: 'include',
     });
     if (res.ok) { fetchPosts(); fetchPendingCount(); }
   };
@@ -690,6 +693,7 @@ function BlogTab() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'draft', rejected_reason: reason }),
+      credentials: 'include',
     });
     if (res.ok) {
       setRejectingId(null);
@@ -759,12 +763,14 @@ function BlogTab() {
         res = await fetch(`/api/xiaoheiduo9898/blog/${editingPost.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload),
         });
       } else {
         res = await fetch('/api/xiaoheiduo9898/blog', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload),
         });
       }
@@ -786,7 +792,7 @@ function BlogTab() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除这篇文章吗？')) return;
-    const res = await fetch(`/api/xiaoheiduo9898/blog/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/xiaoheiduo9898/blog/${id}`, { method: 'DELETE', credentials: 'include' });
     if (res.ok) fetchPosts();
   };
 
@@ -795,6 +801,7 @@ function BlogTab() {
     const res = await fetch(`/api/xiaoheiduo9898/blog/${post.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ status: newStatus }),
     });
     if (res.ok) { fetchPosts(); fetchPendingCount(); }
@@ -1051,6 +1058,7 @@ function UploadTab({ categories, onRefresh }: { categories: Category[]; onRefres
         const res = await fetch('/api/xiaoheiduo9898/images/upload', {
           method: 'POST',
           body: formData,
+          credentials: 'include',
         });
 
         if (res.ok) {
@@ -1158,6 +1166,7 @@ function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRe
     const res = await fetch('/api/xiaoheiduo9898/categories', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ id, price_cents: Math.round(priceDollars * 100) }),
     });
     if (res.ok) {
@@ -1187,6 +1196,7 @@ function CategoriesTab({ categories, onRefresh }: { categories: Category[]; onRe
         const res = await fetch('/api/xiaoheiduo9898/packages/upload', {
           method: 'POST',
           body: formData,
+          credentials: 'include',
         });
         const data = await res.json();
         if (res.ok && data.success) {
@@ -1364,7 +1374,7 @@ function DedupTab({ categories, onRefresh }: { categories: Category[]; onRefresh
     setScanning(true);
     setResult(null);
     try {
-      const res = await fetch('/api/xiaoheiduo9898/dedup');
+      const res = await fetch('/api/xiaoheiduo9898/dedup', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setDuplicateGroups(data.duplicateGroups || []);
@@ -1398,6 +1408,7 @@ function DedupTab({ categories, onRefresh }: { categories: Category[]; onRefresh
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
